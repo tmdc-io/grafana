@@ -68,15 +68,15 @@ func (b *ScopeAPIBuilder) InstallSchema(scheme *runtime.Scheme) error {
 	}
 
 	err = scheme.AddFieldLabelConversionFunc(
-		scope.ScopeDashboardResourceInfo.GroupVersionKind(),
+		scope.ScopeDashboardBindingResourceInfo.GroupVersionKind(),
 		func(label, value string) (string, string, error) {
-			fieldSet := SelectableScopeDashboardFields(&scope.ScopeDashboard{})
+			fieldSet := SelectableScopeDashboardBindingFields(&scope.ScopeDashboardBinding{})
 			for key := range fieldSet {
 				if label == key {
 					return label, value, nil
 				}
 			}
-			return "", "", fmt.Errorf("field label not supported for %s: %s", scope.ScopeDashboardResourceInfo.GroupVersionKind(), label)
+			return "", "", fmt.Errorf("field label not supported for %s: %s", scope.ScopeDashboardBindingResourceInfo.GroupVersionKind(), label)
 		},
 	)
 	if err != nil {
@@ -103,7 +103,7 @@ func (b *ScopeAPIBuilder) GetAPIGroupInfo(
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(scope.GROUP, scheme, metav1.ParameterCodec, codecs)
 
 	scopeResourceInfo := scope.ScopeResourceInfo
-	scopeDashboardResourceInfo := scope.ScopeDashboardResourceInfo
+	scopeDashboardResourceInfo := scope.ScopeDashboardBindingResourceInfo
 
 	storage := map[string]rest.Storage{}
 
@@ -113,7 +113,7 @@ func (b *ScopeAPIBuilder) GetAPIGroupInfo(
 	}
 	storage[scopeResourceInfo.StoragePath()] = scopeStorage
 
-	scopeDashboardStorage, err := newScopeDashboardStorage(scheme, optsGetter)
+	scopeDashboardStorage, err := newScopeDashboardBindingStorage(scheme, optsGetter)
 	if err != nil {
 		return nil, err
 	}
