@@ -164,12 +164,10 @@ func AuthorizeUser(token string, userInfo *BasicUserInfo) (*BasicUserInfo, error
 		userInfo.IsGrafanaAdmin = &admin
 	} else if viewerCommonTag(ar.Result.Tags, viewerTags) {
 		userInfo.Role = org.RoleViewer
-		admin = false // Reset admin status
-		userInfo.IsGrafanaAdmin = &admin
-	} else {
-		userInfo.Role = org.RoleNone
 		admin = false
 		userInfo.IsGrafanaAdmin = &admin
+	} else {
+		return nil, nil
 	}
 
 	return userInfo, nil
