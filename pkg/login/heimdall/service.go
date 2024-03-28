@@ -167,9 +167,11 @@ func AuthorizeUser(token string, userInfo *BasicUserInfo) (*BasicUserInfo, error
 		admin = false
 		userInfo.IsGrafanaAdmin = &admin
 	} else {
+		// userInfo.Role = org.RoleNone
+		// admin = false
+		// userInfo.IsGrafanaAdmin = &admin
 		return nil, nil
 	}
-
 	return userInfo, nil
 }
 
