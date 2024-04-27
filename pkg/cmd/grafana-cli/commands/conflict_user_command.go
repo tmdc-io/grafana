@@ -33,7 +33,7 @@ import (
 	"github.com/grafana/grafana/pkg/setting"
 )
 
-func initConflictCfg(cmd *utils.ContextCommandLine) (*setting.Cfg, *featuremgmt.FeatureManager, error) {
+func initConflictCfg(cmd *utils.ContextCommandLine) (*setting.Cfg, featuremgmt.FeatureToggles, error) {
 	configOptions := strings.Split(cmd.String("configOverrides"), " ")
 	configOptions = append(configOptions, cmd.Args().Slice()...)
 	cfg, err := setting.NewCfgFromArgs(setting.CommandLineArgs{
@@ -771,7 +771,7 @@ ORDER BY
 
 func notServiceAccount(ss *sqlstore.SQLStore) string {
 	return fmt.Sprintf("is_service_account = %s",
-		ss.Dialect.BooleanStr(false))
+		ss.GetDialect().BooleanStr(false))
 }
 
 // confirm function asks for user input
