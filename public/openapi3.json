@@ -488,12 +488,6 @@
           "application/json": {
             "schema": {
               "properties": {
-                "id": {
-                  "description": "ID Identifier of the deleted dashboard.",
-                  "example": 65,
-                  "format": "int64",
-                  "type": "integer"
-                },
                 "message": {
                   "description": "Message Message of the deleted dashboard.",
                   "example": "Dashboard My Dashboard deleted",
@@ -503,10 +497,15 @@
                   "description": "Title Title of the deleted dashboard.",
                   "example": "My Dashboard",
                   "type": "string"
+                },
+                "uid": {
+                  "description": "UID Identifier of the deleted dashboard.",
+                  "example": "65",
+                  "type": "string"
                 }
               },
               "required": [
-                "id",
+                "uid",
                 "title",
                 "message"
               ],
@@ -3253,6 +3252,123 @@
         "title": "BasicAuth contains basic HTTP authentication credentials.",
         "type": "object"
       },
+      "CacheConfig": {
+        "description": "Config defines the internal representation of a cache configuration, including fields not set by the API caller",
+        "properties": {
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "dataSourceID": {
+            "description": "Fields that can be set by the API caller - read/write",
+            "format": "int64",
+            "type": "integer"
+          },
+          "dataSourceUID": {
+            "type": "string"
+          },
+          "defaultTTLMs": {
+            "description": "These are returned by the HTTP API, but are managed internally - read-only\nNote: 'created' and 'updated' are special properties managed automatically by xorm, but we are setting them manually",
+            "format": "int64",
+            "type": "integer"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "ttlQueriesMs": {
+            "description": "TTL MS, or \"time to live\", is how long a cached item will stay in the cache before it is removed (in milliseconds)",
+            "format": "int64",
+            "type": "integer"
+          },
+          "ttlResourcesMs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updated": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "useDefaultTTL": {
+            "description": "If UseDefaultTTL is enabled, then the TTLQueriesMS and TTLResourcesMS in this object is always sent as the default TTL located in grafana.ini",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "CacheConfigResponse": {
+        "properties": {
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "dataSourceID": {
+            "description": "Fields that can be set by the API caller - read/write",
+            "format": "int64",
+            "type": "integer"
+          },
+          "dataSourceUID": {
+            "type": "string"
+          },
+          "defaultTTLMs": {
+            "description": "These are returned by the HTTP API, but are managed internally - read-only\nNote: 'created' and 'updated' are special properties managed automatically by xorm, but we are setting them manually",
+            "format": "int64",
+            "type": "integer"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "ttlQueriesMs": {
+            "description": "TTL MS, or \"time to live\", is how long a cached item will stay in the cache before it is removed (in milliseconds)",
+            "format": "int64",
+            "type": "integer"
+          },
+          "ttlResourcesMs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updated": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "useDefaultTTL": {
+            "description": "If UseDefaultTTL is enabled, then the TTLQueriesMS and TTLResourcesMS in this object is always sent as the default TTL located in grafana.ini",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "CacheConfigSetter": {
+        "description": "ConfigSetter defines the cache parameters that users can configure per datasource\nThis is only intended to be consumed by the SetCache HTTP Handler",
+        "properties": {
+          "dataSourceID": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "dataSourceUID": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "ttlQueriesMs": {
+            "description": "TTL MS, or \"time to live\", is how long a cached item will stay in the cache before it is removed (in milliseconds)",
+            "format": "int64",
+            "type": "integer"
+          },
+          "ttlResourcesMs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "useDefaultTTL": {
+            "description": "If UseDefaultTTL is enabled, then the TTLQueriesMS and TTLResourcesMS in this object is always sent as the default TTL located in grafana.ini",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
       "CalculateDiffTarget": {
         "properties": {
           "dashboardId": {
@@ -3540,25 +3656,16 @@
         },
         "type": "object"
       },
-      "CloudMigrationRequest": {
-        "properties": {
-          "authToken": {
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
       "CloudMigrationResponse": {
         "properties": {
           "created": {
             "format": "date-time",
             "type": "string"
           },
-          "id": {
-            "format": "int64",
-            "type": "integer"
-          },
           "stack": {
+            "type": "string"
+          },
+          "uid": {
             "type": "string"
           },
           "updated": {
@@ -3572,7 +3679,7 @@
         "properties": {
           "runs": {
             "items": {
-              "$ref": "#/components/schemas/MigrateDataResponseDTO"
+              "$ref": "#/components/schemas/MigrateDataResponseListDTO"
             },
             "type": "array"
           }
@@ -6018,7 +6125,6 @@
       "Hit": {
         "properties": {
           "folderId": {
-            "description": "Deprecated: use FolderUID instead",
             "format": "int64",
             "type": "integer"
           },
@@ -6037,6 +6143,9 @@
           },
           "isStarred": {
             "type": "boolean"
+          },
+          "remainingTrashAtAge": {
+            "type": "string"
           },
           "slug": {
             "type": "string"
@@ -6722,15 +6831,14 @@
       },
       "MigrateDataResponseDTO": {
         "properties": {
-          "id": {
-            "format": "int64",
-            "type": "integer"
-          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/MigrateDataResponseItemDTO"
             },
             "type": "array"
+          },
+          "uid": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -6764,6 +6872,14 @@
           "refId",
           "status"
         ],
+        "type": "object"
+      },
+      "MigrateDataResponseListDTO": {
+        "properties": {
+          "uid": {
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "MoveFolderCommand": {
@@ -9053,6 +9169,14 @@
         },
         "type": "object"
       },
+      "RestoreDeletedDashboardCommand": {
+        "properties": {
+          "folderUid": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "RevokeAuthTokenCmd": {
         "properties": {
           "authTokenId": {
@@ -9849,6 +9973,23 @@
             "items": {
               "format": "int64",
               "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "SetTeamMembershipsCommand": {
+        "properties": {
+          "admins": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "members": {
+            "items": {
+              "type": "string"
             },
             "type": "array"
           }
@@ -11824,7 +11965,6 @@
         "type": "object"
       },
       "gettableAlert": {
-        "description": "GettableAlert gettable alert",
         "properties": {
           "annotations": {
             "$ref": "#/components/schemas/labelSet"
@@ -11886,6 +12026,7 @@
         "type": "array"
       },
       "gettableSilence": {
+        "description": "GettableSilence gettable silence",
         "properties": {
           "comment": {
             "description": "comment",
@@ -12085,7 +12226,6 @@
         "type": "array"
       },
       "postableSilence": {
-        "description": "PostableSilence postable silence",
         "properties": {
           "comment": {
             "description": "comment",
@@ -14840,17 +14980,6 @@
       },
       "post": {
         "operationId": "createMigration",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CloudMigrationRequest"
-              }
-            }
-          },
-          "required": true,
-          "x-originalParamName": "body"
-        },
         "responses": {
           "200": {
             "$ref": "#/components/responses/cloudMigrationResponse"
@@ -14871,18 +15000,51 @@
         ]
       }
     },
-    "/cloudmigration/migration/{id}": {
+    "/cloudmigration/migration/run/{runUID}": {
+      "get": {
+        "operationId": "getCloudMigrationRun",
+        "parameters": [
+          {
+            "description": "RunUID of a migration run",
+            "in": "path",
+            "name": "runUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/cloudMigrationRunResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorisedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbiddenError"
+          },
+          "500": {
+            "$ref": "#/components/responses/internalServerError"
+          }
+        },
+        "summary": "Get the result of a single migration run.",
+        "tags": [
+          "migrations"
+        ]
+      }
+    },
+    "/cloudmigration/migration/{uid}": {
       "delete": {
         "operationId": "deleteCloudMigration",
         "parameters": [
           {
-            "description": "ID of an migration",
+            "description": "UID of a migration",
             "in": "path",
-            "name": "id",
+            "name": "uid",
             "required": true,
             "schema": {
-              "format": "int64",
-              "type": "integer"
+              "type": "string"
             }
           }
         ],
@@ -14907,13 +15069,12 @@
         "operationId": "getCloudMigration",
         "parameters": [
           {
-            "description": "ID of an migration",
+            "description": "UID of a migration",
             "in": "path",
-            "name": "id",
+            "name": "uid",
             "required": true,
             "schema": {
-              "format": "int64",
-              "type": "integer"
+              "type": "string"
             }
           }
         ],
@@ -14937,18 +15098,17 @@
         ]
       }
     },
-    "/cloudmigration/migration/{id}/run": {
+    "/cloudmigration/migration/{uid}/run": {
       "get": {
         "operationId": "getCloudMigrationRunList",
         "parameters": [
           {
-            "description": "ID of an migration",
+            "description": "UID of a migration",
             "in": "path",
-            "name": "id",
+            "name": "uid",
             "required": true,
             "schema": {
-              "format": "int64",
-              "type": "integer"
+              "type": "string"
             }
           }
         ],
@@ -14976,13 +15136,12 @@
         "operationId": "runCloudMigration",
         "parameters": [
           {
-            "description": "ID of an migration",
+            "description": "UID of a migration",
             "in": "path",
-            "name": "id",
+            "name": "uid",
             "required": true,
             "schema": {
-              "format": "int64",
-              "type": "integer"
+              "type": "string"
             }
           }
         ],
@@ -15001,51 +15160,6 @@
           }
         },
         "summary": "Trigger the run of a migration to the Grafana Cloud.",
-        "tags": [
-          "migrations"
-        ]
-      }
-    },
-    "/cloudmigration/migration/{id}/run/{runID}": {
-      "get": {
-        "operationId": "getCloudMigrationRun",
-        "parameters": [
-          {
-            "description": "ID of an migration",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "int64",
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Run ID of a migration run",
-            "in": "path",
-            "name": "runID",
-            "required": true,
-            "schema": {
-              "format": "int64",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/cloudMigrationRunResponse"
-          },
-          "401": {
-            "$ref": "#/components/responses/unauthorisedError"
-          },
-          "403": {
-            "$ref": "#/components/responses/forbiddenError"
-          },
-          "500": {
-            "$ref": "#/components/responses/internalServerError"
-          }
-        },
-        "summary": "Get the result of a single migration run.",
         "tags": [
           "migrations"
         ]
@@ -15920,6 +16034,91 @@
         "summary": "Restore a dashboard to a given dashboard version using UID.",
         "tags": [
           "dashboard_versions"
+        ]
+      }
+    },
+    "/dashboards/uid/{uid}/trash": {
+      "delete": {
+        "description": "Will delete the dashboard given the specified unique identifier (uid).",
+        "operationId": "hardDeleteDashboardByUID",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/deleteDashboardResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorisedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/internalServerError"
+          }
+        },
+        "summary": "Hard delete dashboard by uid.",
+        "tags": [
+          "dashboards"
+        ]
+      },
+      "patch": {
+        "operationId": "restoreDeletedDashboardByUID",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uid",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreDeletedDashboardCommand"
+              }
+            }
+          },
+          "required": true,
+          "x-originalParamName": "Body"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/postDashboardResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorisedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/internalServerError"
+          }
+        },
+        "summary": "Restore a dashboard to a given dashboard version using UID.",
+        "tags": [
+          "dashboards"
         ]
       }
     },
@@ -16973,6 +17172,188 @@
         "summary": "Fetch data source resources.",
         "tags": [
           "datasources"
+        ]
+      }
+    },
+    "/datasources/{dataSourceUID}/cache": {
+      "get": {
+        "description": "get cache config for a single data source",
+        "operationId": "getDataSourceCacheConfig",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataSourceUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CacheConfigResponse"
+                }
+              }
+            },
+            "description": "CacheConfigResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/internalServerError"
+          }
+        },
+        "tags": [
+          "enterprise"
+        ]
+      },
+      "post": {
+        "description": "set cache config for a single data source",
+        "operationId": "setDataSourceCacheConfig",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataSourceUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CacheConfigSetter"
+              }
+            }
+          },
+          "required": true,
+          "x-originalParamName": "body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CacheConfigResponse"
+                }
+              }
+            },
+            "description": "CacheConfigResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequestError"
+          },
+          "500": {
+            "$ref": "#/components/responses/internalServerError"
+          }
+        },
+        "tags": [
+          "enterprise"
+        ]
+      }
+    },
+    "/datasources/{dataSourceUID}/cache/clean": {
+      "post": {
+        "description": "clean cache for a single data source",
+        "operationId": "cleanDataSourceCache",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataSourceUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CacheConfigResponse"
+                }
+              }
+            },
+            "description": "CacheConfigResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/internalServerError"
+          }
+        },
+        "tags": [
+          "enterprise"
+        ]
+      }
+    },
+    "/datasources/{dataSourceUID}/cache/disable": {
+      "post": {
+        "description": "disable cache for a single data source",
+        "operationId": "disableDataSourceCache",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataSourceUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CacheConfigResponse"
+                }
+              }
+            },
+            "description": "CacheConfigResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/internalServerError"
+          }
+        },
+        "tags": [
+          "enterprise"
+        ]
+      }
+    },
+    "/datasources/{dataSourceUID}/cache/enable": {
+      "post": {
+        "description": "enable cache for a single data source",
+        "operationId": "enableDataSourceCache",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataSourceUID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CacheConfigResponse"
+                }
+              }
+            },
+            "description": "CacheConfigResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/internalServerError"
+          }
+        },
+        "tags": [
+          "enterprise"
         ]
       }
     },
@@ -20893,6 +21274,14 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "description": "Flag indicating if only soft deleted Dashboards should be returned",
+            "in": "query",
+            "name": "deleted",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -21948,6 +22337,52 @@
           }
         },
         "summary": "Add Team Member.",
+        "tags": [
+          "teams"
+        ]
+      },
+      "put": {
+        "description": "Takes user emails, and updates team members and admins to the provided lists of users.\nAny current team members and admins not in the provided lists will be removed.",
+        "operationId": "setTeamMemberships",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetTeamMembershipsCommand"
+              }
+            }
+          },
+          "required": true,
+          "x-originalParamName": "body"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/okResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthorisedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/internalServerError"
+          }
+        },
+        "summary": "Set team memberships.",
         "tags": [
           "teams"
         ]
