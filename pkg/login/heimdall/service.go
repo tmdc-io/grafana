@@ -129,7 +129,7 @@ func AuthorizeUser(token string, userInfo *BasicUserInfo) (*BasicUserInfo, error
 		return nil, nil
 	}
 
-	return nil, nil
+	return userInfo, nil
 }
 
 // client configures an HTTP client with TLS verification disabled.
