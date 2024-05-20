@@ -75,7 +75,7 @@ func checkAuthorization(accessToken string, tag string) (*AuthorizationResponse,
 
 	cfg, err := LoadConfig()
 	if err != nil {
-		log.Fatalf("failed to load environment variables: %v", err)
+		fmt.Printf("failed to load environment variables")
 	}
 
 	aR := AuthorizationRequest{
@@ -91,7 +91,7 @@ func checkAuthorization(accessToken string, tag string) (*AuthorizationResponse,
 	req, err := json.Marshal(aR)
 
 	if err != nil {
-		log.Printf("Error marshaling JSON:", err)
+		fmt.Printf("Error marshaling JSON:")
 	}
 	authReq := bytes.NewReader(req)
 
@@ -136,7 +136,7 @@ func AuthorizeUser(token string, userInfo *BasicUserInfo) (*BasicUserInfo, error
 func client() *http.Client {
 	cfg, err := LoadConfig()
 	if err != nil {
-		log.Fatalf("failed to load environment variables: %v", err)
+		fmt.Printf("failed to load environment variables")
 	}
 	if cfg.HeimdallUseUnsafe == "true" {
 		tr := &http.Transport{
