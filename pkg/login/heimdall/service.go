@@ -120,15 +120,15 @@ func AuthorizeUser(token string, userInfo *BasicUserInfo) (*BasicUserInfo, error
 				admin = true
 				userInfo.Role = org.RoleAdmin
 				userInfo.IsGrafanaAdmin = &admin
-			} else if tag == Tags[1] {
+			} else {
 				userInfo.Role = org.RoleViewer
 				admin = false
 				userInfo.IsGrafanaAdmin = &admin
-			} else {
-				userInfo.Role = org.RoleNone
-				admin = false
-				userInfo.IsGrafanaAdmin = &admin
 			}
+		} else {
+			userInfo.Role = org.RoleNone
+			admin = false
+			userInfo.IsGrafanaAdmin = &admin
 		}
 		return nil, nil
 	}
