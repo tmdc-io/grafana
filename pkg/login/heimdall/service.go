@@ -119,6 +119,7 @@ func AuthorizeUser(token string, userInfo *BasicUserInfo) (*BasicUserInfo, error
 				admin = true
 				userInfo.Role = org.RoleAdmin
 				userInfo.IsGrafanaAdmin = &admin
+				return userInfo, nil
 			} else if tag == Tags[1] {
 				userInfo.Role = org.RoleViewer
 				admin = false
