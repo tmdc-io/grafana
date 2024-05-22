@@ -108,9 +108,8 @@ func checkAuthorization(accessToken string, tag string) (*AuthorizationResponse,
 }
 
 func AuthorizeUser(token string, userInfo *BasicUserInfo) (*BasicUserInfo, error) {
-	tags := Tags
 
-	for _, tag := range tags {
+	for _, tag := range Tags {
 		ar, err := checkAuthorization(token, tag)
 		if err != nil {
 			return nil, err
@@ -120,20 +119,23 @@ func AuthorizeUser(token string, userInfo *BasicUserInfo) (*BasicUserInfo, error
 				admin = true
 				userInfo.Role = org.RoleAdmin
 				userInfo.IsGrafanaAdmin = &admin
+				return userInfo, nil
 			} else if tag == Tags[1] {
 				userInfo.Role = org.RoleViewer
 				admin = false
 				userInfo.IsGrafanaAdmin = &admin
+				return userInfo, nil
 			}
 		} else {
 			userInfo.Role = org.RoleNone
 			admin = false
 			userInfo.IsGrafanaAdmin = &admin
+			return userInfo, nil
 		}
 		return nil, nil
 	}
 
-	return userInfo, nil
+	return nil, nil
 }
 
 // client configures an HTTP client with TLS verification disabled.
