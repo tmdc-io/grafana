@@ -124,10 +124,12 @@ func AuthorizeUser(token string, userInfo *BasicUserInfo) (*BasicUserInfo, error
 				admin = false
 				userInfo.IsGrafanaAdmin = &admin
 			}
+			log.Printf("Access granted for tag: %s", tag)
 		} else {
 			userInfo.Role = org.RoleNone
 			admin = false
 			userInfo.IsGrafanaAdmin = &admin
+			log.Printf("Access not for tag: %s", tag)
 		}
 		return nil, nil
 	}
