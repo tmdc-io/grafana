@@ -461,6 +461,8 @@ build-tmdc-docker: ## Build Docker image based on Ubuntu for development.
 	docker buildx build - \
 	--output type=docker \
 	--platform $(PLATFORM) \
+	--sbom=true \
+	--provenance=true \
 	--build-arg BINGO=false \
 	--build-arg COMMIT_SHA=$$(git rev-parse HEAD) \
 	--build-arg BUILD_BRANCH=$$(git rev-parse --abbrev-ref HEAD) \
