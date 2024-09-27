@@ -31,5 +31,5 @@ jobs:
     - name: build docker
       run: make build-tmdc-docker GITHUB_TAGS=${{github.ref_name}}
 
-    - name: push docker
-      run: make push-tmdc-docker GITHUB_TAGS=${{github.ref_name}}
+    # - name: push docker
+    #   run: make push-tmdc-docker GITHUB_TAGS=${{github.ref_name}}
