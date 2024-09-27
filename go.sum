@@ -2299,6 +2299,10 @@ github.com/grafana/grafana-plugin-sdk-go v0.250.0 h1:9EBucp9jLqMx2b8NTlOXH+4OuQW
 github.com/grafana/grafana-plugin-sdk-go v0.250.0/go.mod h1:gCGN9kHY3KeX4qyni3+Kead38Q+85pYOrsDcxZp6AIk=
 github.com/grafana/grafana/apps/playlist v0.0.0-20240917082838-e2bce38a7990 h1:uQMZE/z+Y+o/U0z/g8ckAHss7U7LswedilByA2535DU=
 github.com/grafana/grafana/apps/playlist v0.0.0-20240917082838-e2bce38a7990/go.mod h1:3Vi0xv/4OBkBw4R9GAERkSrBnx06qrjpmNBRisucuSM=
+github.com/grafana/grafana/apps/playlist v0.0.0-20240927104302-35f5ef007c14 h1:y42uSI/sl5qLlPPEcHcKtmZBj2fag/AzFg04gK4vesE=
+github.com/grafana/grafana/apps/playlist v0.0.0-20240927104302-35f5ef007c14/go.mod h1:fPXdZCt4003KGEZs0DDUNX81UXj1OSb9akJ46hb2BEw=
+github.com/grafana/grafana/apps/playlist v0.0.0-20240927111852-012d62782cf7 h1:Yj21i/P4ystl15/dDxCdnBXfog/2ov1Rlq2qnVUiP3g=
+github.com/grafana/grafana/apps/playlist v0.0.0-20240927111852-012d62782cf7/go.mod h1:fPXdZCt4003KGEZs0DDUNX81UXj1OSb9akJ46hb2BEw=
 github.com/grafana/grafana/pkg/aggregator v0.0.0-20240813192817-1b0e6b5c09b2 h1:2H9x4q53pkfUGtSNYD1qSBpNnxrFgylof/TYADb5xMI=
 github.com/grafana/grafana/pkg/aggregator v0.0.0-20240813192817-1b0e6b5c09b2/go.mod h1:gBLBniiSUQvyt4LRrpIeysj8Many0DV+hdUKifRE0Ec=
 github.com/grafana/grafana/pkg/apimachinery v0.0.0-20240821155123-6891eb1d35da h1:2E3c/I3ayAy4Z1GwIPqXNZcpUccRapE1aBXA1ho4g7o=

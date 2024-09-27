@@ -475,13 +475,14 @@ require (
 
 require (
 	github.com/getkin/kin-openapi v0.127.0 // @grafana/grafana-app-platform-squad
-	github.com/grafana/grafana/apps/playlist v0.0.0-20240917082838-e2bce38a7990 // @grafana/grafana-app-platform-squad
+	github.com/grafana/grafana/apps/playlist v0.0.0-20240927111852-012d62782cf7 // @grafana/grafana-app-platform-squad
 )
+
+require github.com/caarlos0/env/v6 v6.10.1
 
 require (
 	cloud.google.com/go/longrunning v0.5.12 // indirect
 	github.com/at-wat/mqtt-go v0.19.4 // indirect
-	github.com/caarlos0/env/v6 v6.10.1 // indirect
 	github.com/dolthub/maphash v0.1.0 // indirect
 	github.com/gammazero/deque v0.2.1 // indirect
 	github.com/grafana/grafana-app-sdk v0.19.0 // indirect
