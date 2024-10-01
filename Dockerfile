@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG BASE_IMAGE=alpine:3.19.1
+ARG BASE_IMAGE=alpine:3.20.3
 ARG JS_IMAGE=node:20-alpine
 ARG JS_PLATFORM=linux/amd64
 ARG GO_IMAGE=golang:1.22.4-alpine
@@ -42,6 +42,7 @@ ARG BINGO="true"
 
 RUN if grep -i -q alpine /etc/issue; then \
       apk add --no-cache \
+          bash \
           # This is required to allow building on arm64 due to https://github.com/golang/go/issues/22040
           binutils-gold \
           # Install build dependencies
