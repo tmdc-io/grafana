@@ -5,6 +5,9 @@ on:
     tags:
       - '*[0-9]+.*[0-9]+.*[0-9]-d*'
 
+env:
+  IMAGE_NAME: rubiklabs/grafana
+
 jobs:
 # For RELEASE STEPS
 
@@ -28,13 +31,31 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
       with:
+        images: ${{ env.IMAGE_NAME }}
+        tags: ${{ github.ref_name }}
+
+    # - name: build docker
+      # run: make build-tmdc-docker GITHUB_TAGS=${{github.ref_name}}
+
+    - name: Build and push image
+      uses: docker/build-push-action@v6
+      with:
+        sbom: true
+        push: true
+        provenance: mode=max
         platforms: linux/amd64,linux/arm64
-    
-    - name: build docker
-      run: make build-tmdc-docker GITHUB_TAGS=${{github.ref_name}}
+        tags: ${{ steps.meta.outputs.tags }}
+        build-args: |                   # Define build arguments here
+          BINGO=false
+          COMMIT_SHA=${{ github.sha }}
+          BUILD_BRANCH=${{ github.ref_name }}
+          BINGO=false
+          COMMIT_SHA=$$(git rev-parse HEAD)
+          BUILD_BRANCH=$$(git rev-parse --abbrev-ref HEAD) 
 
     # - name: push docker
     #   run: make push-tmdc-docker GITHUB_TAGS=${{github.ref_name}}
