@@ -460,10 +460,13 @@ build-tmdc-docker: ## Build Docker image based on Ubuntu for development.
 	tar -ch . | \
 	docker buildx build - \
 	--output type=docker \
-	--platform $(PLATFORM) \
+	--platform linux/amd64,linux/arm64 \
 	--build-arg BINGO=false \
 	--build-arg COMMIT_SHA=$$(git rev-parse HEAD) \
 	--build-arg BUILD_BRANCH=$$(git rev-parse --abbrev-ref HEAD) \
+	--push \
+	--sbom=true \
+	--attest type=provenance,mode=max \
 	--tag docker.io/rubiklabs/grafana:$(GITHUB_TAGS) \
 	$(DOCKER_BUILD_ARGS)
 
