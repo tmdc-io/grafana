@@ -28,9 +28,55 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
-    - name: Build and Push Image with SBOM and Provenance
-      uses: docker/build-push-action@v6
-      run: make build-tmdc-docker GITHUB_TAGS=${{github.ref_name}}
+    # - name: Build and Push Image with SBOM and Provenance
+    #   uses: docker/build-push-action@v6
+    #   run: make build-tmdc-docker GITHUB_TAGS=${{github.ref_name}}
+
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: ./
+      with:
+        version: latest
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+    
+    - name: Set up Docker Buildx
+      uses: ./
+      with:
+        buildkitd-flags: --debug
+
+    # - name: Build and Push Image with SBOM and Provenance
+    #   uses: docker/build-push-action@v6
+    #   with:
+    #     context: .                       # Use current directory as the context
+    #     file: Dockerfile                 # Specify Dockerfile
+    #     platforms: linux/amd64,linux/arm64  # Multi-platform support
+    #     sbom: true                       # Enable SBOM generation
+    #     provenance: true                 # Enable provenance attestation
+    #     push: true                       # Push image to registry
+    #     tags: ${{ steps.meta.outputs.tags }}  # Set image tags from metadata
+    #     build-args: |                   # Define build arguments here
+    #       BINGO=false
+    #       COMMIT_SHA=${{ github.sha }}
+    #       BUILD_BRANCH=${{ github.ref_name }}
+    - name: Build and Push Docker Image with SBOM and Provenance
+      env:
+        COMMIT_SHA: ${{ github.sha }}                  # GitHub commit SHA for build
+        BUILD_BRANCH: ${{ github.ref_name }}            # GitHub branch or tag name
+        GITHUB_TAGS: ${{ env.GITHUB_TAGS }}             # Image tag from env variable
+      run: |
+        tar -ch . | docker buildx build - \
+          --output type=docker \
+          --platform linux/amd64,linux/arm64 \
+          --build-arg BINGO=false \
+          --build-arg COMMIT_SHA=$COMMIT_SHA \
+          --build-arg BUILD_BRANCH=$BUILD_BRANCH \
+          --push \
+          --sbom=true \
+          --attest type=provenance,mode=min \
+          --tag $IMAGE_NAME:$GITHUB_TAGS
+
 
     # - name: build docker
       # run: make build-tmdc-docker GITHUB_TAGS=${{github.ref_name}}
