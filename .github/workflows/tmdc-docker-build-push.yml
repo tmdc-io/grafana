@@ -51,6 +51,7 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         build-args: |                   # Define build arguments here
           BINGO=false
+          WIRE_TAGS=oss
           COMMIT_SHA=${{ github.sha }}
           BUILD_BRANCH=${{ github.ref_name }}
           BINGO=false
