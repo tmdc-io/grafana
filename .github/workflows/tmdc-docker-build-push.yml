@@ -41,7 +41,7 @@ jobs:
         provenance: mode=max
         platforms: linux/amd64,linux/arm64
         tags: ${{ secrets.DOCKER_HUB_USERNAME }}/grafana:${{ github.ref_name }}
-        build-args: |                   # Define build arguments here
+        build-args: |
           BINGO=false
           WIRE_TAGS=oss
           COMMIT_SHA=${{ github.sha }}
@@ -52,20 +52,3 @@ jobs:
 
     # - name: push docker
     #   run: make push-tmdc-docker GITHUB_TAGS=${{github.ref_name}}
-
-  - name: Build and Push zookeeper Docker image
-      uses: docker/build-push-action@v6
-      with:
-        context: docker/
-        file: ./docker/Dockerfile
-        platforms: linux/amd64
-        push: true
-        sbom: true
-        # cache-from: type=gha
-        # cache-to: type=gha,mode=max
-        provenance: mode=max
-        build-args: |
-            DOCKER_REGISTRY=docker.io
-            GIT_SHA=${{ env.GIT_SHA }}
-            VERSION=${{ env.VERSION }}
-        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/zookeeper:${{ github.ref_name }}
