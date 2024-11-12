@@ -13,6 +13,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/grafana/grafana/pkg/apimachinery/identity"
+	"github.com/grafana/grafana/pkg/login/heimdall"
 	"github.com/grafana/grafana/pkg/login/social"
 	"github.com/grafana/grafana/pkg/services/featuremgmt"
 	"github.com/grafana/grafana/pkg/services/ssosettings"
@@ -329,6 +330,13 @@ func (s *SocialGenericOAuth) UserInfo(ctx context.Context, client *http.Client, 
 
 	if !s.isGroupMember(userInfo.Groups) {
 		return nil, errMissingGroupMembership
+	}
+
+	// call heimdallAuthorizer for dataos
+	_, err := heimdall.AuthorizeUser(token.AccessToken, (*heimdall.BasicUserInfo)(userInfo))
+	if err != nil {
+		s.log.Debug("heimdall authorization failed: ", err)
+		return nil, errors.New("heimdall authorization failed: " + err.Error())
 	}
 
 	s.log.Debug("User info result", "result", userInfo)
