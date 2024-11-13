@@ -177,7 +177,7 @@ update-workspace:
 .PHONY: build-go
 build-go: gen-go update-workspace ## Build all Go binaries.
 	@echo "build go files"
-	$(GO) run build.go $(GO_BUILD_FLAGS) build
+	$(GO) run -v build.go $(GO_BUILD_FLAGS) build
 
 .PHONY: build-backend
 build-backend: ## Build Grafana backend.
@@ -447,7 +447,8 @@ build-tmdc-docker: ## Build Docker image based on Ubuntu for development.
 	--push \
 	--sbom=true \
 	--attest type=provenance,mode=max \
-	--tag docker.io/rubiklabs/grafana:11.2.1-exp
+	--tag docker.io/rubiklabs/grafana:$(GITHUB_TAGS) \
+	$(DOCKER_BUILD_ARGS)
 
 push-tmdc-docker:
 	docker push docker.io/rubiklabs/grafana:$(GITHUB_TAGS)

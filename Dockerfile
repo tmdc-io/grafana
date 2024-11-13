@@ -19,7 +19,7 @@ COPY plugins-bundled plugins-bundled
 COPY public public
 COPY LICENSE ./
 
-RUN apk add --no-cache make build-base python3
+RUN apk add --no-cache make build-base python3 bash
 
 RUN yarn install 
 
@@ -41,7 +41,7 @@ ARG BINGO="true"
 RUN if grep -i -q alpine /etc/issue; then \
       apk add --no-cache \
           # This is required to allow building on arm64 due to https://github.com/golang/go/issues/22040
-          binutils-gold \
+          binutils-gold bash \
           # Install build dependencies
           gcc g++ make git; \
     fi
