@@ -109,39 +109,40 @@ func checkAuthorization(accessToken string, tag string) (*AuthorizationResponse,
 }
 
 func AuthorizeUser(token string, userInfo *BasicUserInfo) (*BasicUserInfo, error) {
+	admin := false
+	userRole := org.RoleNone           // Default to None role
+	orgRoles := map[int64]org.RoleType{1: org.RoleNone} // Default organization role to None
 
 	for _, tag := range Tags {
 		ar, err := checkAuthorization(token, tag)
 		if err != nil {
 			return nil, err
 		}
+
 		if ar.Allow {
 			if tag == Tags[0] {
+				// Assign Admin role and return immediately since it’s the highest privilege.
 				admin = true
-				userInfo.Role = org.RoleAdmin
-				userInfo.OrgRoles = map[int64]org.RoleType{1: org.RoleAdmin}
+				userRole = org.RoleAdmin
+				orgRoles[1] = org.RoleAdmin
 				userInfo.IsGrafanaAdmin = &admin
-				return userInfo, nil
-			} else if tag == Tags[1] {
+				break
+			} else if tag == Tags[2] { // Editor has higher priority than Viewer
+				userRole = org.RoleEditor
+				orgRoles[1] = org.RoleEditor
 				admin = false
-				userInfo.Role = org.RoleViewer
-				userInfo.OrgRoles = map[int64]org.RoleType{1: org.RoleViewer}
-				userInfo.IsGrafanaAdmin = &admin
-				return userInfo, nil
-			} else if tag == Tags[2] {
+			} else if tag == Tags[1] && userRole != org.RoleEditor { 
+				// Only assign Viewer if Editor is not already assigned
+				userRole = org.RoleViewer
+				orgRoles[1] = org.RoleViewer
 				admin = false
-				userInfo.Role = org.RoleEditor
-				userInfo.OrgRoles = map[int64]org.RoleType{1: org.RoleEditor}
-				userInfo.IsGrafanaAdmin = &admin
-				return userInfo, nil
 			}
-		} else {
-			admin = false
-			userInfo.Role = org.RoleNone
-			userInfo.OrgRoles = map[int64]org.RoleType{1: org.RoleNone}
-			userInfo.IsGrafanaAdmin = &admin
 		}
 	}
+
+	userInfo.Role = userRole
+	userInfo.OrgRoles = orgRoles
+	userInfo.IsGrafanaAdmin = &admin
 
 	return userInfo, nil
 }
