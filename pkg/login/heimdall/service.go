@@ -126,7 +126,6 @@ func AuthorizeUser(token string, userInfo *BasicUserInfo) (*BasicUserInfo, error
 				userRole = org.RoleAdmin
 				orgRoles[1] = org.RoleAdmin
 				userInfo.IsGrafanaAdmin = &admin
-				break
 			} else if tag == Tags[2] { // Editor has higher priority than Viewer
 				userRole = org.RoleEditor
 				orgRoles[1] = org.RoleEditor
