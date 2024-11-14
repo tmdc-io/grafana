@@ -68,7 +68,7 @@ type Config struct {
 	HeimdallUseUnsafe  string `env:"HEIMDALL_USE_UNSAFE" envDefault:"true"`
 }
 
-var Tags = []string{"dataos:type:grafana:admin", "dataos:type:grafana:view"}
+var Tags = []string{"dataos:type:grafana:admin","dataos:type:grafana:view","dataos:type:grafana:edit"}
 
 func checkAuthorization(accessToken string, tag string) (*AuthorizationResponse, error) {
 
@@ -119,16 +119,24 @@ func AuthorizeUser(token string, userInfo *BasicUserInfo) (*BasicUserInfo, error
 			if tag == Tags[0] {
 				admin = true
 				userInfo.Role = org.RoleAdmin
+				userInfo.OrgRoles = map[int64]org.RoleType{1: org.RoleAdmin}
 				userInfo.IsGrafanaAdmin = &admin
 				return userInfo, nil
 			} else if tag == Tags[1] {
-				userInfo.Role = org.RoleViewer
 				admin = false
+				userInfo.Role = org.RoleViewer
+				userInfo.OrgRoles = map[int64]org.RoleType{1: org.RoleViewer}
+				userInfo.IsGrafanaAdmin = &admin
+			} else if tag == Tags[2] {
+				admin = false
+				userInfo.Role = org.RoleEditor
+				userInfo.OrgRoles = map[int64]org.RoleType{1: org.RoleEditor}
 				userInfo.IsGrafanaAdmin = &admin
 			}
 		} else {
-			userInfo.Role = org.RoleNone
 			admin = false
+			userInfo.Role = org.RoleNone
+			userInfo.OrgRoles = map[int64]org.RoleType{1: org.RoleNone}
 			userInfo.IsGrafanaAdmin = &admin
 		}
 	}
