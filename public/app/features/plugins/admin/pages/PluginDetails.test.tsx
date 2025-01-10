@@ -182,7 +182,8 @@ describe('Plugin details page', () => {
 
     it('should display the installed version if a plugin is installed', async () => {
       const installedVersion = '1.3.443';
-      const { queryByText } = renderPluginDetails({ id, installedVersion });
+      const isInstalled = true;
+      const { queryByText } = renderPluginDetails({ id, isInstalled, installedVersion });
 
       expect(await queryByText(`${installedVersion}`)).toBeInTheDocument();
     });
@@ -200,7 +201,7 @@ describe('Plugin details page', () => {
       };
 
       const { findByText, queryByText } = renderPluginDetails({ id, details });
-      expect(await findByText('1.1.1')).toBeInTheDocument();
+      expect(await findByText('4.2.2')).toBeInTheDocument();
       expect(queryByText(/>=8.0.0/i)).toBeInTheDocument();
     });
 
@@ -917,7 +918,7 @@ describe('Plugin details page', () => {
       const updatedAt = '2023-10-26T16:54:55.000Z';
       const { queryByText } = renderPluginDetails({ id, updatedAt });
       expect(queryByText('Last updated:')).toBeVisible();
-      expect(queryByText('10/26/2023')).toBeVisible();
+      expect(queryByText('Oct 26, 2023')).toBeVisible();
       expect(queryByText('Report a concern')).toBeVisible();
     });
 
@@ -926,6 +927,21 @@ describe('Plugin details page', () => {
       const updatedAt = undefined;
       const { queryByText } = renderPluginDetails({ id, updatedAt });
       expect(queryByText('Last updated:')).toBeNull();
+    });
+
+    it('should display last commit date information', async () => {
+      const id = 'right-panel-test-plugin';
+      const lastCommitDate = '2023-10-26T16:54:55.000Z';
+      const { queryByText } = renderPluginDetails({ id, details: { lastCommitDate, links: [] } });
+      expect(queryByText('Last commit date:')).toBeVisible();
+      expect(queryByText('Oct 26, 2023')).toBeVisible();
+    });
+
+    it('should not display last commit date if there is no lastCommit data', async () => {
+      const id = 'right-panel-test-plugin';
+      const lastCommitDate = undefined;
+      const { queryByText } = renderPluginDetails({ id, details: { lastCommitDate, links: [] } });
+      expect(queryByText('Last commit date:')).toBeNull();
     });
 
     it('should not display Report Abuse if the plugin is Core', async () => {

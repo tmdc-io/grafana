@@ -93,10 +93,6 @@ export GF_FEATURE_TOGGLES_ENABLE=newNavigation
 
 ## Variable expansion
 
-{{% admonition type="note" %}}
-Only available in Grafana 7.1+.
-{{% /admonition %}}
-
 If any of your options contains the expression `$__<provider>{<argument>}`
 or `${<environment variable>}`, then they will be processed by Grafana's
 variable expander. The expander runs the provider with the provided argument
@@ -634,7 +630,11 @@ Define a whitelist of allowed IP addresses or domains, with ports, to be used in
 
 ### disable_brute_force_login_protection
 
-Set to `true` to disable [brute force login protection](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#account-lockout). Default is `false`. An existing user's account will be locked after 5 attempts in 5 minutes.
+Set to `true` to disable [brute force login protection](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#account-lockout). Default is `false`. An existing user's account will be unable to login for 5 minutes if all login attempts are spent within a 5 minute window.
+
+### brute_force_login_protection_max_attempts
+
+Configure how many login attempts a user have within a 5 minute window before the account will be locked. Default is `5`.
 
 ### cookie_secure
 
@@ -693,7 +693,9 @@ Set the policy template that will be used when adding the `Content-Security-Poli
 
 ### actions_allow_post_url
 
-Sets API paths to be accessible between plugins using the POST verb. This is a comma separated list, and uses glob matching.
+Sets API paths to be accessible between plugins using the POST verb. If the value is empty, you can only pass remote requests through the proxy. If the value is set, you can also send authenticated POST requests to the local server. You typically use this to enable backend communication between plugins.
+
+This is a comma-separated list which uses glob matching.
 
 This will allow access to all plugins that have a backend:
 
@@ -768,7 +770,7 @@ Number dashboard versions to keep (per dashboard). Default: `20`, Minimum: `1`.
 This feature prevents users from setting the dashboard refresh interval to a lower value than a given interval value. The default interval value is 5 seconds.
 The interval string is a possibly signed sequence of decimal numbers, followed by a unit suffix (ms, s, m, h, d), e.g. `30s` or `1m`.
 
-As of Grafana v7.3, this also limits the refresh interval options in Explore.
+This also limits the refresh interval options in Explore.
 
 ### default_home_dashboard_path
 
@@ -824,9 +826,8 @@ that this organization already exists. Default is 1.
 
 ### auto_assign_org_role
 
-The `auto_assign_org_role` setting determines the default role assigned to new users
-in the main organization (if `auto_assign_org` setting is set to true).
-The available options are `Viewer` (default), `Admin`, `Editor`, and `None`. For example:
+The `auto_assign_org_role` setting determines the default role assigned to new users in the main organization if `auto_assign_org` setting is set to `true`.
+You can set this to one of the following roles: (`Viewer` (default), `Admin`, `Editor`, and `None`). For example:
 
 `auto_assign_org_role = Viewer`
 
@@ -1069,13 +1070,9 @@ Limit of API key seconds to live before expiration. Default is -1 (unlimited).
 
 ### sigv4_auth_enabled
 
-> Only available in Grafana 7.3+.
-
 Set to `true` to enable the AWS Signature Version 4 Authentication option for HTTP-based datasources. Default is `false`.
 
 ### sigv4_verbose_logging
-
-> Only available in Grafana 8.4+.
 
 Set to `true` to enable verbose request signature logging when AWS Signature Version 4 Authentication is enabled. Default is `false`.
 
@@ -1481,8 +1478,6 @@ Syslog tag. By default, the process's `argv[0]` is used.
 
 ## [log.frontend]
 
-**Note:** This feature is available in Grafana 7.4+.
-
 ### enabled
 
 Faro javascript agent is initialized. Default is `false`.
@@ -1521,7 +1516,7 @@ Turns on tracing instrumentation. Only affects Grafana Javascript Agent.
 
 ### api_key
 
-If `custom_endpoint` required authentication, you can set the api key here. Only relevant for Grafana Javascript Agent provider.
+If `custom_endpoint` required authentication, you can set the API key here. Only relevant for Grafana Javascript Agent provider.
 
 <hr>
 
@@ -1774,7 +1769,7 @@ Configures the batch size for the annotation clean-up job. This setting is used 
 
 ### tags_length
 
-Enforces the maximum allowed length of the tags for any newly introduced annotations. It can be between 500 and 4096 (inclusive). Default value is 500. Setting it to a higher value would impact performance therefore is not recommended.
+Enforces the maximum allowed amount of tags for any newly introduced annotations. This value can be between 500 and 4096 (inclusive). The default value is 500. Setting it to a higher value would impact performance and is therefore not recommended.
 
 ## [annotations.dashboard]
 
@@ -2292,6 +2287,24 @@ Force download of the public key for verifying plugin signature on startup. The 
 ### disable_plugins
 
 Enter a comma-separated list of plugin identifiers to avoid loading (including core plugins). These plugins will be hidden in the catalog.
+
+### preinstall
+
+Enter a comma-separated list of plugin identifiers to preinstall. These plugins will be installed on startup, using the Grafana catalog as the source. Preinstalled plugins cannot be uninstalled from the Grafana user interface; they need to be removed from this list first.
+
+To pin plugins to a specific version, use the format `plugin_id@version`, for example,`grafana-piechart-panel@1.6.0`. If no version is specified, the latest version is installed. _The plugin is automatically updated_ to the latest version when a new version is available in the Grafana plugin catalog on startup (except for new major versions).
+
+To use a custom URL to download a plugin, use the format `plugin_id@version@url`, for example, `grafana-piechart-panel@1.6.0@https://example.com/grafana-piechart-panel-1.6.0.zip`.
+
+By default, Grafana preinstalls some suggested plugins. Check the default configuration file for the list of plugins.
+
+### preinstall_async
+
+By default, plugins are preinstalled asynchronously, as a background process. This means that Grafana will start up faster, but the plugins may not be available immediately. If you need a plugin to be installed for provisioning, set this option to `false`. This causes Grafana to wait for the plugins to be installed before starting up (and fail if a plugin can't be installed).
+
+### preinstall_disabled
+
+This option disables all preinstalled plugins. The default is `false`. To disable a specific plugin from being preinstalled, use the `disable_plugins` option.
 
 <hr>
 

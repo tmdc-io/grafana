@@ -16,7 +16,7 @@ import { useEffect, useMemo, useRef } from 'react';
 
 import { GrafanaTheme2 } from '@grafana/data';
 import { selectors } from '@grafana/e2e-selectors';
-import { config, reportInteraction } from '@grafana/runtime';
+import { reportInteraction } from '@grafana/runtime';
 import { EmptyState, Icon, LoadingBar, useStyles2 } from '@grafana/ui';
 import { t } from 'app/core/internationalization';
 
@@ -28,7 +28,8 @@ import { CommandPaletteAction } from './types';
 import { useMatches } from './useMatches';
 
 export function CommandPalette() {
-  const styles = useStyles2(getSearchStyles);
+  const lateralSpace = getCommandPalettePosition();
+  const styles = useStyles2(getSearchStyles, lateralSpace);
 
   const { query, showing, searchQuery } = useKBar((state) => ({
     showing: state.visualState === VisualState.showing,
@@ -86,7 +87,8 @@ interface RenderResultsProps {
 
 const RenderResults = ({ isFetchingSearchResults, searchResults }: RenderResultsProps) => {
   const { results: kbarResults, rootActionId } = useMatches();
-  const styles = useStyles2(getSearchStyles);
+  const lateralSpace = getCommandPalettePosition();
+  const styles = useStyles2(getSearchStyles, lateralSpace);
   const dashboardsSectionTitle = t('command-palette.section.dashboard-search-results', 'Dashboards');
   const foldersSectionTitle = t('command-palette.section.folder-search-results', 'Folders');
   // because dashboard search results aren't registered as actions, we need to manually
@@ -120,6 +122,9 @@ const RenderResults = ({ isFetchingSearchResults, searchResults }: RenderResults
   }, [kbarResults, dashboardsSectionTitle, dashboardResultItems, foldersSectionTitle, folderResultItems]);
 
   const showEmptyState = !isFetchingSearchResults && items.length === 0;
+  useEffect(() => {
+    showEmptyState && reportInteraction('grafana_empty_state_shown', { source: 'command_palette' });
+  }, [showEmptyState]);
 
   return showEmptyState ? (
     <EmptyState
@@ -155,10 +160,7 @@ const getCommandPalettePosition = () => {
   return lateralSpace;
 };
 
-const getSearchStyles = (theme: GrafanaTheme2) => {
-  const lateralSpace = getCommandPalettePosition();
-  const isSingleTopNav = config.featureToggles.singleTopNav;
-
+const getSearchStyles = (theme: GrafanaTheme2, lateralSpace: number) => {
   return {
     positioner: css({
       zIndex: theme.zIndex.portal,
@@ -184,15 +186,13 @@ const getSearchStyles = (theme: GrafanaTheme2) => {
       border: `1px solid ${theme.colors.border.weak}`,
       overflow: 'hidden',
       boxShadow: theme.shadows.z3,
-      ...(isSingleTopNav && {
-        [theme.breakpoints.up('lg')]: {
-          position: 'fixed',
-          right: lateralSpace,
-          left: lateralSpace,
-          maxWidth: 'unset',
-          width: 'unset',
-        },
-      }),
+      [theme.breakpoints.up('lg')]: {
+        position: 'fixed',
+        right: lateralSpace,
+        left: lateralSpace,
+        maxWidth: 'unset',
+        width: 'unset',
+      },
     }),
     loadingBarContainer: css({
       position: 'absolute',

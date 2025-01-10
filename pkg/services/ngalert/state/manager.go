@@ -71,6 +71,9 @@ type ManagerCfg struct {
 	DoNotSaveNormalState bool
 	// MaxStateSaveConcurrency controls the number of goroutines (per rule) that can save alert state in parallel.
 	MaxStateSaveConcurrency int
+	// StatePeriodicSaveBatchSize controls the size of the alert instance batch that is saved periodically when the
+	// alertingSaveStatePeriodic feature flag is enabled.
+	StatePeriodicSaveBatchSize int
 	// ApplyNoDataAndErrorToAllStates makes state manager to apply exceptional results (NoData and Error)
 	// to all states when corresponding execution in the rule definition is set to either `Alerting` or `OK`
 	ApplyNoDataAndErrorToAllStates bool
@@ -123,21 +126,23 @@ func (st *Manager) Run(ctx context.Context) error {
 	return nil
 }
 
-func (st *Manager) Warm(ctx context.Context, rulesReader RuleReader) {
+func (st *Manager) Warm(ctx context.Context, rulesReader RuleReader, instanceReader InstanceReader) {
+	logger := st.log.FromContext(ctx)
+
 	if st.instanceStore == nil {
-		st.log.Info("Skip warming the state because instance store is not configured")
+		logger.Info("Skip warming the state because instance store is not configured")
 		return
 	}
-	startTime := time.Now()
-	st.log.Info("Warming state cache for startup")
 
-	orgIds, err := st.instanceStore.FetchOrgIds(ctx)
+	startTime := time.Now()
+	logger.Info("Warming state cache for startup")
+
+	orgIds, err := instanceReader.FetchOrgIds(ctx)
 	if err != nil {
-		st.log.Error("Unable to fetch orgIds", "error", err)
+		logger.Error("Unable to fetch orgIds", "error", err)
 	}
 
 	statesCount := 0
-	states := make(map[int64]map[string]*ruleStates, len(orgIds))
 	for _, orgId := range orgIds {
 		// Get Rules
 		ruleCmd := ngModels.ListAlertRulesQuery{
@@ -145,7 +150,7 @@ func (st *Manager) Warm(ctx context.Context, rulesReader RuleReader) {
 		}
 		alertRules, err := rulesReader.ListAlertRules(ctx, &ruleCmd)
 		if err != nil {
-			st.log.Error("Unable to fetch previous state", "error", err)
+			logger.Error("Unable to fetch previous state", "error", err)
 		}
 
 		ruleByUID := make(map[string]*ngModels.AlertRule, len(alertRules))
@@ -159,7 +164,7 @@ func (st *Manager) Warm(ctx context.Context, rulesReader RuleReader) {
 		// We will not enforce this here, but it's convenient to emit the warning here as we load up all the rules.
 		for name, size := range groupSizes {
 			if st.rulesPerRuleGroupLimit > 0 && size > st.rulesPerRuleGroupLimit {
-				st.log.Warn(
+				logger.Warn(
 					"Large rule group was loaded. Large groups are discouraged and changes to them may be disallowed in the future.",
 					"limit", st.rulesPerRuleGroupLimit,
 					"actual", size,
@@ -168,16 +173,13 @@ func (st *Manager) Warm(ctx context.Context, rulesReader RuleReader) {
 			}
 		}
 
-		orgStates := make(map[string]*ruleStates, len(ruleByUID))
-		states[orgId] = orgStates
-
 		// Get Instances
 		cmd := ngModels.ListAlertInstancesQuery{
 			RuleOrgID: orgId,
 		}
-		alertInstances, err := st.instanceStore.ListAlertInstances(ctx, &cmd)
+		alertInstances, err := instanceReader.ListAlertInstances(ctx, &cmd)
 		if err != nil {
-			st.log.Error("Unable to fetch previous state", "error", err)
+			logger.Error("Unable to fetch previous state", "error", err)
 		}
 
 		for _, entry := range alertInstances {
@@ -193,23 +195,17 @@ func (st *Manager) Warm(ctx context.Context, rulesReader RuleReader) {
 				annotations = make(map[string]string)
 			}
 
-			rulesStates, ok := orgStates[entry.RuleUID]
-			if !ok {
-				rulesStates = &ruleStates{states: make(map[data.Fingerprint]*State)}
-				orgStates[entry.RuleUID] = rulesStates
-			}
-
 			lbs := map[string]string(entry.Labels)
 			cacheID := entry.Labels.Fingerprint()
 			var resultFp data.Fingerprint
 			if entry.ResultFingerprint != "" {
 				fp, err := strconv.ParseUint(entry.ResultFingerprint, 16, 64)
 				if err != nil {
-					st.log.Error("Failed to parse result fingerprint of alert instance", "error", err, "ruleUID", entry.RuleUID)
+					logger.Error("Failed to parse result fingerprint of alert instance", "error", err, "ruleUID", entry.RuleUID)
 				}
 				resultFp = data.Fingerprint(fp)
 			}
-			rulesStates.states[cacheID] = &State{
+			state := &State{
 				AlertRuleUID:         entry.RuleUID,
 				OrgID:                entry.RuleOrgID,
 				CacheID:              cacheID,
@@ -225,12 +221,12 @@ func (st *Manager) Warm(ctx context.Context, rulesReader RuleReader) {
 				ResolvedAt:           entry.ResolvedAt,
 				LastSentAt:           entry.LastSentAt,
 			}
+			st.cache.set(state)
 			statesCount++
 		}
 	}
 
-	st.cache.setAllStates(states)
-	st.log.Info("State cache has been initialized", "states", statesCount, "duration", time.Since(startTime))
+	logger.Info("State cache has been initialized", "states", statesCount, "duration", time.Since(startTime))
 }
 
 func (st *Manager) Get(orgID int64, alertRuleUID string, stateId data.Fingerprint) *State {
@@ -329,10 +325,35 @@ func (st *Manager) ProcessEvalResults(
 	defer span.End()
 
 	logger := st.log.FromContext(ctx)
-	logger.Debug("State manager processing evaluation results", "resultCount", len(results))
-	states := st.setNextStateForRule(ctx, alertRule, results, extraLabels, logger)
 
-	staleStates := st.deleteStaleStatesFromCache(ctx, logger, evaluatedAt, alertRule)
+	// lazy evaluation of takeImage only once and only if it is requested.
+	var fn func() *ngModels.Image
+	{
+		var image *ngModels.Image
+		var imageTaken bool
+		fn = func() *ngModels.Image {
+			if imageTaken {
+				return image
+			}
+			logger.Debug("Taking image", "dashboard", alertRule.GetDashboardUID(), "panel", alertRule.GetPanelID())
+			img, err := takeImage(ctx, st.images, alertRule)
+			imageTaken = true
+			if err != nil {
+				logger.Warn("Failed to take an image",
+					"dashboard", alertRule.GetDashboardUID(),
+					"panel", alertRule.GetPanelID(),
+					"error", err)
+				return nil
+			}
+			image = img
+			return image
+		}
+	}
+
+	logger.Debug("State manager processing evaluation results", "resultCount", len(results))
+	states := st.setNextStateForRule(ctx, alertRule, results, extraLabels, logger, fn)
+
+	staleStates := st.deleteStaleStatesFromCache(logger, evaluatedAt, alertRule, fn)
 	span.AddEvent("results processed", trace.WithAttributes(
 		attribute.Int64("state_transitions", int64(len(states))),
 		attribute.Int64("stale_states", int64(len(staleStates))),
@@ -374,7 +395,7 @@ func (st *Manager) updateLastSentAt(states StateTransitions, evaluatedAt time.Ti
 	return result
 }
 
-func (st *Manager) setNextStateForRule(ctx context.Context, alertRule *ngModels.AlertRule, results eval.Results, extraLabels data.Labels, logger log.Logger) []StateTransition {
+func (st *Manager) setNextStateForRule(ctx context.Context, alertRule *ngModels.AlertRule, results eval.Results, extraLabels data.Labels, logger log.Logger, takeImageFn func() *ngModels.Image) []StateTransition {
 	if st.applyNoDataAndErrorToAllStates && results.IsNoData() && (alertRule.NoDataState == ngModels.Alerting || alertRule.NoDataState == ngModels.OK || alertRule.NoDataState == ngModels.KeepLast) { // If it is no data, check the mapping and switch all results to the new state
 		// aggregate UID of datasources that returned NoData into one and provide as auxiliary info via annotationa. See: https://github.com/grafana/grafana/issues/88184
 		var refIds strings.Builder
@@ -398,46 +419,50 @@ func (st *Manager) setNextStateForRule(ctx context.Context, alertRule *ngModels.
 				}
 			}
 		}
-		transitions := st.setNextStateForAll(ctx, alertRule, results[0], logger)
+		annotations := map[string]string{
+			"datasource_uid": datasourceUIDs.String(),
+			"ref_id":         refIds.String(),
+		}
+		transitions := st.setNextStateForAll(alertRule, results[0], logger, annotations, takeImageFn)
 		if len(transitions) > 0 {
-			for _, t := range transitions {
-				if t.State.Annotations == nil {
-					t.State.Annotations = make(map[string]string)
-				}
-				t.State.Annotations["datasource_uid"] = datasourceUIDs.String()
-				t.State.Annotations["ref_id"] = refIds.String()
-			}
 			return transitions // if there are no current states for the rule. Create ones for each result
 		}
 	}
 	if st.applyNoDataAndErrorToAllStates && results.IsError() && (alertRule.ExecErrState == ngModels.AlertingErrState || alertRule.ExecErrState == ngModels.OkErrState || alertRule.ExecErrState == ngModels.KeepLastErrState) {
 		// TODO squash all errors into one, and provide as annotation
-		transitions := st.setNextStateForAll(ctx, alertRule, results[0], logger)
+		transitions := st.setNextStateForAll(alertRule, results[0], logger, nil, takeImageFn)
 		if len(transitions) > 0 {
 			return transitions // if there are no current states for the rule. Create ones for each result
 		}
 	}
 	transitions := make([]StateTransition, 0, len(results))
 	for _, result := range results {
-		currentState := st.cache.getOrCreate(ctx, logger, alertRule, result, extraLabels, st.externalURL)
-		s := st.setNextState(ctx, alertRule, currentState, result, logger)
+		currentState := st.cache.create(ctx, logger, alertRule, result, extraLabels, st.externalURL)
+		s := st.setNextState(alertRule, currentState, result, nil, logger, takeImageFn)
+		st.cache.set(currentState) // replace the existing state with the new one
 		transitions = append(transitions, s)
 	}
 	return transitions
 }
 
-func (st *Manager) setNextStateForAll(ctx context.Context, alertRule *ngModels.AlertRule, result eval.Result, logger log.Logger) []StateTransition {
+func (st *Manager) setNextStateForAll(alertRule *ngModels.AlertRule, result eval.Result, logger log.Logger, extraAnnotations data.Labels, takeImageFn func() *ngModels.Image) []StateTransition {
 	currentStates := st.cache.getStatesForRuleUID(alertRule.OrgID, alertRule.UID, false)
 	transitions := make([]StateTransition, 0, len(currentStates))
+	updated := ruleStates{
+		states: make(map[data.Fingerprint]*State, len(currentStates)),
+	}
 	for _, currentState := range currentStates {
-		t := st.setNextState(ctx, alertRule, currentState, result, logger)
+		newState := currentState.Copy()
+		t := st.setNextState(alertRule, newState, result, extraAnnotations, logger, takeImageFn)
+		updated.states[newState.CacheID] = newState
 		transitions = append(transitions, t)
 	}
+	st.cache.setRuleStates(alertRule.GetKey(), updated)
 	return transitions
 }
 
 // Set the current state based on evaluation results
-func (st *Manager) setNextState(ctx context.Context, alertRule *ngModels.AlertRule, currentState *State, result eval.Result, logger log.Logger) StateTransition {
+func (st *Manager) setNextState(alertRule *ngModels.AlertRule, currentState *State, result eval.Result, extraAnnotations data.Labels, logger log.Logger, takeImageFn func() *ngModels.Image) StateTransition {
 	start := st.clock.Now()
 
 	currentState.LastEvaluationTime = result.EvaluatedAt
@@ -514,18 +539,15 @@ func (st *Manager) setNextState(ctx context.Context, alertRule *ngModels.AlertRu
 	}
 
 	if shouldTakeImage(currentState.State, oldState, currentState.Image, newlyResolved) {
-		image, err := takeImage(ctx, st.images, alertRule)
-		if err != nil {
-			logger.Warn("Failed to take an image",
-				"dashboard", alertRule.GetDashboardUID(),
-				"panel", alertRule.GetPanelID(),
-				"error", err)
-		} else if image != nil {
+		image := takeImageFn()
+		if image != nil {
 			currentState.Image = image
 		}
 	}
 
-	st.cache.set(currentState)
+	for key, val := range extraAnnotations {
+		currentState.Annotations[key] = val
+	}
 
 	nextState := StateTransition{
 		State:               currentState,
@@ -584,7 +606,7 @@ func translateInstanceState(state ngModels.InstanceStateType) eval.State {
 	}
 }
 
-func (st *Manager) deleteStaleStatesFromCache(ctx context.Context, logger log.Logger, evaluatedAt time.Time, alertRule *ngModels.AlertRule) []StateTransition {
+func (st *Manager) deleteStaleStatesFromCache(logger log.Logger, evaluatedAt time.Time, alertRule *ngModels.AlertRule, takeImageFn func() *ngModels.Image) []StateTransition {
 	// If we are removing two or more stale series it makes sense to share the resolved image as the alert rule is the same.
 	// TODO: We will need to change this when we support images without screenshots as each series will have a different image
 	staleStates := st.cache.deleteRuleStates(alertRule.GetKey(), func(s *State) bool {
@@ -604,13 +626,8 @@ func (st *Manager) deleteStaleStatesFromCache(ctx context.Context, logger log.Lo
 
 		if oldState == eval.Alerting {
 			s.ResolvedAt = &evaluatedAt
-			image, err := takeImage(ctx, st.images, alertRule)
-			if err != nil {
-				logger.Warn("Failed to take an image",
-					"dashboard", alertRule.GetDashboardUID(),
-					"panel", alertRule.GetPanelID(),
-					"error", err)
-			} else if image != nil {
+			image := takeImageFn()
+			if image != nil {
 				s.Image = image
 			}
 		}

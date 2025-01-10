@@ -1,23 +1,29 @@
 import { Action, KBarProvider } from 'kbar';
-import { Component, ComponentType } from 'react';
+import { Component, ComponentType, Fragment } from 'react';
+import CacheProvider from 'react-inlinesvg/provider';
 import { Provider } from 'react-redux';
 import { Route, Routes } from 'react-router-dom-v5-compat';
 
-import { config, navigationLogger, reportInteraction } from '@grafana/runtime';
-import { ErrorBoundaryAlert, GlobalStyles, PortalContainer } from '@grafana/ui';
+import {
+  config,
+  navigationLogger,
+  reportInteraction,
+  SidecarContext_EXPERIMENTAL,
+  sidecarServiceSingleton_EXPERIMENTAL,
+} from '@grafana/runtime';
+import { ErrorBoundaryAlert, GlobalStyles, PortalContainer, TimeRangeProvider } from '@grafana/ui';
 import { getAppRoutes } from 'app/routes/routes';
 import { store } from 'app/store/store';
 
 import { loadAndInitAngularIfEnabled } from './angular/loadAndInitAngularIfEnabled';
 import { GrafanaApp } from './app';
 import { GrafanaContext } from './core/context/GrafanaContext';
-import { SidecarContext } from './core/context/SidecarContext';
 import { GrafanaRouteWrapper } from './core/navigation/GrafanaRoute';
 import { RouteDescriptor } from './core/navigation/types';
-import { sidecarService } from './core/services/SidecarService';
 import { ThemeProvider } from './core/utils/ConfigProvider';
 import { LiveConnectionWarning } from './features/live/LiveConnectionWarning';
 import { ExtensionRegistriesProvider } from './features/plugins/extensions/ExtensionRegistriesContext';
+import { pluginExtensionRegistries } from './features/plugins/extensions/registry/setup';
 import { ExperimentalSplitPaneRouterWrapper, RouterWrapper } from './routes/RoutesWrapper';
 
 interface AppWrapperProps {
@@ -41,6 +47,8 @@ export function addPageBanner(fn: ComponentType) {
 }
 
 export class AppWrapper extends Component<AppWrapperProps, AppWrapperState> {
+  private iconCacheID = `grafana-icon-cache-${config.buildInfo.commit}`;
+
   constructor(props: AppWrapperProps) {
     super(props);
     this.state = {};
@@ -50,6 +58,14 @@ export class AppWrapper extends Component<AppWrapperProps, AppWrapperState> {
     await loadAndInitAngularIfEnabled();
     this.setState({ ready: true });
     $('.preloader').remove();
+
+    // clear any old icon caches
+    const cacheKeys = await window.caches.keys();
+    for (const key of cacheKeys) {
+      if (key.startsWith('grafana-icon-cache') && key !== this.iconCacheID) {
+        window.caches.delete(key);
+      }
+    }
   }
 
   renderRoute = (route: RouteDescriptor) => {
@@ -86,30 +102,36 @@ export class AppWrapper extends Component<AppWrapperProps, AppWrapperState> {
       bodyRenderHooks,
     };
 
+    const MaybeTimeRangeProvider = config.featureToggles.timeRangeProvider ? TimeRangeProvider : Fragment;
+
     return (
       <Provider store={store}>
         <ErrorBoundaryAlert style="page">
           <GrafanaContext.Provider value={app.context}>
             <ThemeProvider value={config.theme2}>
-              <KBarProvider
-                actions={[]}
-                options={{ enableHistory: true, callbacks: { onSelectAction: commandPaletteActionSelected } }}
-              >
-                <GlobalStyles />
-                <SidecarContext.Provider value={sidecarService}>
-                  <ExtensionRegistriesProvider registries={app.pluginExtensionsRegistries}>
-                    <div className="grafana-app">
-                      {config.featureToggles.appSidecar ? (
-                        <ExperimentalSplitPaneRouterWrapper {...routerWrapperProps} />
-                      ) : (
-                        <RouterWrapper {...routerWrapperProps} />
-                      )}
-                      <LiveConnectionWarning />
-                      <PortalContainer />
-                    </div>
-                  </ExtensionRegistriesProvider>
-                </SidecarContext.Provider>
-              </KBarProvider>
+              <CacheProvider name={this.iconCacheID}>
+                <KBarProvider
+                  actions={[]}
+                  options={{ enableHistory: true, callbacks: { onSelectAction: commandPaletteActionSelected } }}
+                >
+                  <GlobalStyles />
+                  <MaybeTimeRangeProvider>
+                    <SidecarContext_EXPERIMENTAL.Provider value={sidecarServiceSingleton_EXPERIMENTAL}>
+                      <ExtensionRegistriesProvider registries={pluginExtensionRegistries}>
+                        <div className="grafana-app">
+                          {config.featureToggles.appSidecar ? (
+                            <ExperimentalSplitPaneRouterWrapper {...routerWrapperProps} />
+                          ) : (
+                            <RouterWrapper {...routerWrapperProps} />
+                          )}
+                          <LiveConnectionWarning />
+                          <PortalContainer />
+                        </div>
+                      </ExtensionRegistriesProvider>
+                    </SidecarContext_EXPERIMENTAL.Provider>
+                  </MaybeTimeRangeProvider>
+                </KBarProvider>
+              </CacheProvider>
             </ThemeProvider>
           </GrafanaContext.Provider>
         </ErrorBoundaryAlert>

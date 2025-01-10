@@ -3,7 +3,9 @@ package sql
 import (
 	"testing"
 	"text/template"
+	"time"
 
+	"github.com/grafana/grafana/pkg/apimachinery/utils"
 	"github.com/grafana/grafana/pkg/storage/unified/resource"
 	"github.com/grafana/grafana/pkg/storage/unified/sql/sqltemplate/mocks"
 )
@@ -43,6 +45,7 @@ func TestUnifiedStorageQueries(t *testing.T) {
 							Type:       resource.WatchEvent_ADDED,
 							PreviousRV: 123,
 						},
+						Folder: "fldr",
 					},
 				},
 			},
@@ -59,6 +62,7 @@ func TestUnifiedStorageQueries(t *testing.T) {
 								Name:      "name",
 							},
 						},
+						Folder: "fldr",
 					},
 				},
 			},
@@ -75,7 +79,7 @@ func TestUnifiedStorageQueries(t *testing.T) {
 								Name:      "name",
 							},
 						},
-						readResponse: new(readResponse),
+						Response: NewReadResponse(),
 					},
 				},
 			},
@@ -143,9 +147,14 @@ func TestUnifiedStorageQueries(t *testing.T) {
 						SQLTemplate: mocks.NewTestingSQLTemplate(),
 						Request: &resource.ReadRequest{
 							ResourceVersion: 123,
-							Key:             &resource.ResourceKey{},
+							Key: &resource.ResourceKey{
+								Namespace: "ns",
+								Group:     "gp",
+								Resource:  "rs",
+								Name:      "nm",
+							},
 						},
-						readResponse: new(readResponse),
+						Response: NewReadResponse(),
 					},
 				},
 			},
@@ -155,6 +164,26 @@ func TestUnifiedStorageQueries(t *testing.T) {
 					Name: "single path",
 					Data: &sqlResourceUpdateRVRequest{
 						SQLTemplate: mocks.NewTestingSQLTemplate(),
+					},
+				},
+			},
+
+			sqlResoureceHistoryUpdateUid: {
+				{
+					Name: "modify uids in history",
+					Data: &sqlResourceHistoryUpdateRequest{
+						SQLTemplate: mocks.NewTestingSQLTemplate(),
+						WriteEvent: resource.WriteEvent{
+							Key: &resource.ResourceKey{
+								Namespace: "nn",
+								Group:     "gg",
+								Resource:  "rr",
+								Name:      "name",
+							},
+							PreviousRV: 1234,
+						},
+						OldUID: "old-uid",
+						NewUID: "new-uid",
 					},
 				},
 			},
@@ -173,6 +202,7 @@ func TestUnifiedStorageQueries(t *testing.T) {
 							},
 							PreviousRV: 1234,
 						},
+						Folder: "fldr",
 					},
 				},
 			},
@@ -208,6 +238,82 @@ func TestUnifiedStorageQueries(t *testing.T) {
 					Data: &sqlResourceVersionUpsertRequest{
 						SQLTemplate:     mocks.NewTestingSQLTemplate(),
 						ResourceVersion: int64(12354),
+					},
+				},
+			},
+
+			sqlResourceStats: {
+				{
+					Name: "query",
+					Data: &sqlStatsRequest{
+						SQLTemplate: mocks.NewTestingSQLTemplate(),
+						MinCount:    10, // Not yet used in query (only response filter)
+					},
+				},
+				{
+					Name: "query-namespace",
+					Data: &sqlStatsRequest{
+						SQLTemplate: mocks.NewTestingSQLTemplate(),
+						Namespace:   "default",
+						MinCount:    10, // Not yet used in query (only response filter)
+					},
+				},
+				{
+					Name: "query-folder",
+					Data: &sqlStatsRequest{
+						SQLTemplate: mocks.NewTestingSQLTemplate(),
+						Namespace:   "default",
+						Folder:      "folder",
+						MinCount:    10, // Not yet used in query (only response filter)
+					},
+				},
+			},
+			sqlResourceBlobInsert: {
+				{
+					Name: "basic",
+					Data: &sqlResourceBlobInsertRequest{
+						SQLTemplate: mocks.NewTestingSQLTemplate(),
+						Key: &resource.ResourceKey{
+							Namespace: "x",
+							Group:     "g",
+							Resource:  "r",
+							Name:      "name",
+						},
+						Now: time.UnixMilli(1704056400000).UTC(),
+						Info: &utils.BlobInfo{
+							UID:  "abc",
+							Hash: "xxx",
+							Size: 1234,
+						},
+						ContentType: "text/plain",
+						Value:       []byte("abcdefg"),
+					},
+				},
+			},
+
+			sqlResourceBlobQuery: {
+				{
+					Name: "basic",
+					Data: &sqlResourceBlobQueryRequest{
+						SQLTemplate: mocks.NewTestingSQLTemplate(),
+						Key: &resource.ResourceKey{
+							Namespace: "x",
+							Group:     "g",
+							Resource:  "r",
+							Name:      "name",
+						},
+						UID: "abc",
+					},
+				},
+				{
+					Name: "resource", // NOTE: this returns multiple values
+					Data: &sqlResourceBlobQueryRequest{
+						SQLTemplate: mocks.NewTestingSQLTemplate(),
+						Key: &resource.ResourceKey{
+							Namespace: "x",
+							Group:     "g",
+							Resource:  "r",
+						},
 					},
 				},
 			},

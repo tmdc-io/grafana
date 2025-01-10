@@ -88,10 +88,6 @@ type TeamHTTPHeader struct {
 	Value  string `json:"value"`
 }
 
-func (ds DataSource) TeamHTTPHeaders() (*TeamHTTPHeaders, error) {
-	return GetTeamHTTPHeaders(ds.JsonData)
-}
-
 func GetTeamHTTPHeaders(jsonData *simplejson.Json) (*TeamHTTPHeaders, error) {
 	teamHTTPHeaders := &TeamHTTPHeaders{}
 	if jsonData == nil {
@@ -206,7 +202,7 @@ type UpdateDataSourceCommand struct {
 	UpdateSecretFn          UpdateSecretFn    `json:"-"`
 	IgnoreOldSecureJsonData bool              `json:"-"`
 
-	OnlyUpdateLBACRulesFromAPI bool `json:"-"`
+	AllowLBACRuleUpdates bool `json:"-"`
 }
 
 // DeleteDataSourceCommand will delete a DataSource based on OrgID as well as the UID (preferred), ID, or Name.

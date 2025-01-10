@@ -6,7 +6,7 @@ import { useLocation } from 'react-router-dom-v5-compat';
 import { GrafanaTheme2, NavModelItem } from '@grafana/data';
 import { selectors } from '@grafana/e2e-selectors';
 import { config, reportInteraction } from '@grafana/runtime';
-import { CustomScrollbar, Icon, IconButton, useStyles2, Stack } from '@grafana/ui';
+import { ScrollContainer, useStyles2, Stack } from '@grafana/ui';
 import { useGrafana } from 'app/core/context/GrafanaContext';
 import { t } from 'app/core/internationalization';
 import { setBookmark } from 'app/core/reducers/navBarTree';
@@ -74,11 +74,6 @@ export const MegaMenu = memo(
       if (state.megaMenuDocked) {
         chrome.setMegaMenuOpen(false);
       }
-
-      // refocus on undock/menu open button when changing state
-      setTimeout(() => {
-        document.getElementById(state.megaMenuDocked ? 'mega-menu-toggle' : 'dock-menu-button')?.focus();
-      });
     };
 
     const isPinned = useCallback(
@@ -116,39 +111,12 @@ export const MegaMenu = memo(
 
     return (
       <div data-testid={selectors.components.NavMenu.Menu} ref={ref} {...restProps}>
-        {config.featureToggles.singleTopNav ? (
-          <MegaMenuHeader handleDockedMenu={handleDockedMenu} handleMegaMenu={handleMegaMenu} onClose={onClose} />
-        ) : (
-          <div className={styles.mobileHeader}>
-            <Icon name="bars" size="xl" />
-            <IconButton
-              tooltip={t('navigation.megamenu.close', 'Close menu')}
-              name="times"
-              onClick={onClose}
-              size="xl"
-              variant="secondary"
-            />
-          </div>
-        )}
+        <MegaMenuHeader handleDockedMenu={handleDockedMenu} handleMegaMenu={handleMegaMenu} onClose={onClose} />
         <nav className={styles.content}>
-          <CustomScrollbar showScrollIndicators hideHorizontalTrack>
+          <ScrollContainer height="100%" overflowX="hidden" showScrollIndicators>
             <ul className={styles.itemList} aria-label={t('navigation.megamenu.list-label', 'Navigation')}>
               {navItems.map((link, index) => (
                 <Stack key={link.text} direction={index === 0 ? 'row-reverse' : 'row'} alignItems="start">
-                  {index === 0 && !config.featureToggles.singleTopNav && (
-                    <IconButton
-                      id="dock-menu-button"
-                      className={styles.dockMenuButton}
-                      tooltip={
-                        state.megaMenuDocked
-                          ? t('navigation.megamenu.undock', 'Undock menu')
-                          : t('navigation.megamenu.dock', 'Dock menu')
-                      }
-                      name="web-section-alt"
-                      onClick={handleDockedMenu}
-                      variant="secondary"
-                    />
-                  )}
                   <MegaMenuItem
                     link={link}
                     isPinned={isPinned}
@@ -159,7 +127,7 @@ export const MegaMenu = memo(
                 </Stack>
               ))}
             </ul>
-          </CustomScrollbar>
+          </ScrollContainer>
         </nav>
       </div>
     );
@@ -169,12 +137,11 @@ export const MegaMenu = memo(
 MegaMenu.displayName = 'MegaMenu';
 
 const getStyles = (theme: GrafanaTheme2) => {
-  const isSingleTopNav = config.featureToggles.singleTopNav;
   return {
     content: css({
       display: 'flex',
       flexDirection: 'column',
-      height: isSingleTopNav ? `calc(100% - ${TOP_BAR_LEVEL_HEIGHT}px)` : '100%',
+      height: `calc(100% - ${TOP_BAR_LEVEL_HEIGHT}px)`,
       minHeight: 0,
       position: 'relative',
     }),
