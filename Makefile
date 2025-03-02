@@ -494,8 +494,8 @@ build-tmdc-docker: ## Build Docker image based on Ubuntu for development.
 	--build-arg BINGO=false \
 	--build-arg COMMIT_SHA=$$(git rev-parse HEAD) \
 	--build-arg BUILD_BRANCH=$$(git rev-parse --abbrev-ref HEAD) \
-	--tag docker.io/rubiklabs/grafana:$(GITHUB_TAGS) \
+	--tag docker.io/tmdcio/grafana:$(GITHUB_TAGS) \
 	$(DOCKER_BUILD_ARGS)
 
 push-tmdc-docker:
-	docker push docker.io/rubiklabs/grafana:$(GITHUB_TAGS)
+	docker push docker.io/tmdcio/grafana:$(GITHUB_TAGS)
