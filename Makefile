@@ -448,9 +448,9 @@ build-tmdc-docker: ## Build Docker image based on Ubuntu for development.
 	--push \
 	--sbom=true \
 	--attest type=provenance,mode=max \
-	--tag docker.io/rubiklabs/grafana:$(GITHUB_TAGS) \
+	--tag docker.io/tmdcio/grafana:$(GITHUB_TAGS) \
 	$(DOCKER_BUILD_ARGS)
 
 .PHONY: push-tmdc-docker
 push-tmdc-docker: build-tmdc-docker
-	docker push docker.io/rubiklabs/grafana:$(GITHUB_TAGS)
+	docker push docker.io/tmdcio/grafana:$(GITHUB_TAGS)
