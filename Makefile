@@ -511,3 +511,20 @@ check-tparse:
 .PHONY: help
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+## TMDC
+.PHONY: build-tmdc-docker
+build-tmdc-docker: ## Build Docker image based on Ubuntu for development.
+	@echo "build docker container"
+	tar -ch . | \
+	docker buildx build \
+	--platform linux/amd64 \
+	--build-arg BINGO=false \
+	--build-arg GO_BUILD_TAGS=$(GO_BUILD_TAGS) \
+	--build-arg WIRE_TAGS=$(WIRE_TAGS) \
+	--build-arg COMMIT_SHA=$$(git rev-parse HEAD) \
+	--build-arg BUILD_BRANCH=$$(git rev-parse --abbrev-ref HEAD) \
+	--tag docker.io/tmdcio/grafana:12.0.1-d1 \
+	--push \
+	$(DOCKER_BUILD_ARGS) \
+	-

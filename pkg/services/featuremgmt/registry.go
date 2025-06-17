@@ -411,7 +411,7 @@ var (
 			Stage:        FeatureStageGeneralAvailability,
 			FrontendOnly: true,
 			Owner:        grafanaPluginsPlatformSquad,
-			Expression:   "true", // Enabled by default
+			Expression:   "false", // Enabled by default
 		},
 		{
 			Name:         "dashgpt",
