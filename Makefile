@@ -497,7 +497,7 @@ build-tmdc-docker: ## Build Docker image based on Ubuntu for development.
 	--build-arg WIRE_TAGS=$(WIRE_TAGS) \
 	--build-arg COMMIT_SHA=$$(git rev-parse HEAD) \
 	--build-arg BUILD_BRANCH=$$(git rev-parse --abbrev-ref HEAD) \
-	--tag docker.io/tmdcio/grafana:11.6.3-d1 \
+	--tag docker.io/tmdcio/grafana:$(GITHUB_TAGS) \
 	--push \
 	$(DOCKER_BUILD_ARGS) \
 	-
