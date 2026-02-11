@@ -22,7 +22,7 @@ FROM --platform=${JS_PLATFORM} node:22-alpine AS js-builder-base
 # Javascript build stage
 FROM --platform=${JS_PLATFORM} ${JS_IMAGE} AS js-builder
 
-ENV NODE_OPTIONS=--max_old_space_size=8000
+ENV NODE_OPTIONS=--max_old_space_size=8192
 
 WORKDIR /tmp/grafana
 
