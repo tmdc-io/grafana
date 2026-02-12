@@ -154,6 +154,7 @@ WORKDIR $GF_PATHS_HOME
 # Install dependencies
 RUN if grep -i -q alpine /etc/issue; then \
   apk add --no-cache ca-certificates bash curl tzdata musl-utils && \
+  apk upgrade libcrypto3 apk upgrade libssl3 \
   apk info -vv | sort; \
   elif grep -i -q ubuntu /etc/issue; then \
   DEBIAN_FRONTEND=noninteractive && \
