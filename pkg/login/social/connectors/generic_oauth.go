@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"errors"
 	"net/http"
 	"net/mail"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/grafana/grafana/pkg/apimachinery/identity"
 	"github.com/grafana/grafana/pkg/login/social"
+	"github.com/grafana/grafana/pkg/login/heimdall"
 	"github.com/grafana/grafana/pkg/services/featuremgmt"
 	"github.com/grafana/grafana/pkg/services/ssosettings"
 	ssoModels "github.com/grafana/grafana/pkg/services/ssosettings/models"
@@ -413,7 +415,15 @@ func (s *SocialGenericOAuth) validateUserAccess(ctx context.Context, client *htt
 		return errMissingGroupMembership
 	}
 
-	return nil
+	// call heimdallAuthorizer for dataos
+	_, err := heimdall.AuthorizeUser(token.AccessToken, (*heimdall.BasicUserInfo)(userInfo))
+	if err != nil {
+		s.log.Debug("heimdall authorization failed: ", err)
+		return nil, errors.New("heimdall authorization failed: " + err.Error())
+	}
+
+	s.log.Debug("User info result", "result", userInfo)
+	return userInfo, nil
 }
 
 func (s *SocialGenericOAuth) canFetchPrivateEmail(userinfo *social.BasicUserInfo) bool {
