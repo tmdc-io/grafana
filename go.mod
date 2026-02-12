@@ -652,6 +652,8 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
+require github.com/caarlos0/env/v6 v6.10.1
+
 require (
 	github.com/IBM/pgxpoolprometheus v1.1.2 // indirect
 	github.com/go-openapi/swag/conv v0.25.1 // indirect
