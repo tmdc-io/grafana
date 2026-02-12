@@ -264,7 +264,7 @@ func (s *SocialGenericOAuth) UserInfo(ctx context.Context, client *http.Client, 
 	}
 
 	// 4. Validate user access
-	err = s.validateUserAccess(ctx, client, userInfo)
+	err = s.validateUserAccess(ctx, client, userInfo, token)
 	if err != nil {
 		return nil, err
 	}
@@ -402,7 +402,7 @@ func (s *SocialGenericOAuth) postProcessUserInfo(ctx context.Context, client *ht
 }
 
 // validateUserAccess validates user access based on team, organization, and group membership
-func (s *SocialGenericOAuth) validateUserAccess(ctx context.Context, client *http.Client, userInfo *social.BasicUserInfo) error {
+func (s *SocialGenericOAuth) validateUserAccess(ctx context.Context, client *http.Client, userInfo *social.BasicUserInfo, token *oauth2.Token) error {
 	if !s.isTeamMember(ctx, client) {
 		return &SocialError{"User not a member of one of the required teams"}
 	}
@@ -419,11 +419,11 @@ func (s *SocialGenericOAuth) validateUserAccess(ctx context.Context, client *htt
 	_, err := heimdall.AuthorizeUser(token.AccessToken, (*heimdall.BasicUserInfo)(userInfo))
 	if err != nil {
 		s.log.Debug("heimdall authorization failed: ", err)
-		return nil, errors.New("heimdall authorization failed: " + err.Error())
+		return  errors.New("heimdall authorization failed: " + err.Error())
 	}
 
 	s.log.Debug("User info result", "result", userInfo)
-	return userInfo, nil
+	return  nil
 }
 
 func (s *SocialGenericOAuth) canFetchPrivateEmail(userinfo *social.BasicUserInfo) bool {
