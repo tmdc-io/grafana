@@ -178,6 +178,7 @@ RUN if grep -i -q alpine /etc/issue; then \
   DEBIAN_FRONTEND=noninteractive && \
   apt-get update && \
   apt-get install -y ca-certificates curl tzdata musl && \
+  apk upgrade zlib && \
   apt-get autoremove -y && \
   rm -rf /var/lib/apt/lists/*; \
   else \
