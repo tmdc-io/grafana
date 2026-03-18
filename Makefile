@@ -570,3 +570,21 @@ help: ## Display this help.
 # container/check-licenses target)
 check-licenses:
 	license_finder --decisions-file .github/license_finder.yaml
+
+## TMDC
+.PHONY: build-tmdc-docker
+build-tmdc-docker: ## Build Docker image based on Ubuntu for development.
+	@echo "build docker container"
+	tar -ch . | \
+	docker buildx build - \
+	--platform linux/amd64 \
+	--build-arg BINGO=false \
+	--build-arg GO_BUILD_TAGS=$(GO_BUILD_TAGS) \
+	--build-arg WIRE_TAGS=$(WIRE_TAGS) \
+	--build-arg COMMIT_SHA=$$(git rev-parse HEAD) \
+	--build-arg BUILD_BRANCH=$$(git rev-parse --abbrev-ref HEAD) \
+	--push \
+	--sbom=true \
+	--attest type=provenance,mode=max \
+	--tag docker.io/tmdcio/grafana:$(GITHUB_TAGS) \
+	$(DOCKER_BUILD_ARGS)
