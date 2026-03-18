@@ -172,13 +172,14 @@ WORKDIR $GF_PATHS_HOME
 
 # Install dependencies
 RUN if grep -i -q alpine /etc/issue; then \
+  apk update && \
+  apk upgrade --no-cache zlib && \
   apk add --no-cache ca-certificates bash curl tzdata musl-utils && \
   apk info -vv | sort; \
   elif grep -i -q ubuntu /etc/issue; then \
   DEBIAN_FRONTEND=noninteractive && \
   apt-get update && \
   apt-get install -y ca-certificates curl tzdata musl && \
-  apk upgrade zlib && \
   apt-get autoremove -y && \
   rm -rf /var/lib/apt/lists/*; \
   else \
