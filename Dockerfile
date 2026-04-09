@@ -177,6 +177,8 @@ WORKDIR $GF_PATHS_HOME
 
 # Install dependencies
 RUN if grep -i -q alpine /etc/issue; then \
+  apk update && \
+  apk upgrade --no-cache zlib && \
   apk add --no-cache ca-certificates bash bubblewrap curl tzdata musl-utils && \
   apk info -vv | sort; \
   elif grep -i -q ubuntu /etc/issue; then \

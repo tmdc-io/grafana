@@ -694,6 +694,7 @@ require (
 )
 
 require (
+	github.com/caarlos0/env/v6 v6.10.1
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/kms v0.35.0 // indirect
 	modernc.org/libc v1.67.6 // indirect
