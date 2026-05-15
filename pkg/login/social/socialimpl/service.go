@@ -204,7 +204,7 @@ func createOAuthConnector(name string, info *social.OAuthInfo, cfg *setting.Cfg,
 	case social.AzureADProviderName:
 		return connectors.NewAzureADProvider(info, cfg, orgRoleMapper, ssoSettings, features, cache), nil
 	case social.GenericOAuthProviderName:
-		return connectors.NewGenericOAuthProvider(info, cfg, orgRoleMapper, ssoSettings, features, cache), nil
+		return connectors.NewGenericOAuthProvider(info, cfg, orgRoleMapper, ssoSettings, features), nil
 	case social.GitHubProviderName:
 		return connectors.NewGitHubProvider(info, cfg, orgRoleMapper, ssoSettings, features), nil
 	case social.GitlabProviderName:

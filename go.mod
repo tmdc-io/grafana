@@ -693,6 +693,8 @@ require (
 	github.com/grafana/grafana/apps/shorturl v0.0.0 // @grafana/sharing-squad
 )
 
+require github.com/caarlos0/env/v6 v6.10.1
+
 require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/kms v0.35.0 // indirect

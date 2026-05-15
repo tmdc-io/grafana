@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"errors"
 	"net/http"
 	"net/mail"
 	"strconv"
@@ -12,8 +13,8 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/grafana/grafana/pkg/apimachinery/identity"
-	"github.com/grafana/grafana/pkg/infra/remotecache"
 	"github.com/grafana/grafana/pkg/login/social"
+	"github.com/grafana/grafana/pkg/login/heimdall"
 	"github.com/grafana/grafana/pkg/services/featuremgmt"
 	"github.com/grafana/grafana/pkg/services/ssosettings"
 	ssoModels "github.com/grafana/grafana/pkg/services/ssosettings/models"
@@ -53,8 +54,8 @@ type SocialGenericOAuth struct {
 	teamIds              []string
 }
 
-func NewGenericOAuthProvider(info *social.OAuthInfo, cfg *setting.Cfg, orgRoleMapper *OrgRoleMapper, ssoSettings ssosettings.Service, features featuremgmt.FeatureToggles, cache remotecache.CacheStorage) *SocialGenericOAuth {
-	s := newSocialBaseWithCache(social.GenericOAuthProviderName, orgRoleMapper, info, features, cfg, cache)
+func NewGenericOAuthProvider(info *social.OAuthInfo, cfg *setting.Cfg, orgRoleMapper *OrgRoleMapper, ssoSettings ssosettings.Service, features featuremgmt.FeatureToggles) *SocialGenericOAuth {
+	s := newSocialBase(social.GenericOAuthProviderName, orgRoleMapper, info, features, cfg)
 
 	teamIds, err := util.SplitStringWithError(info.Extra[teamIdsKey])
 	if err != nil {
@@ -67,7 +68,7 @@ func NewGenericOAuthProvider(info *social.OAuthInfo, cfg *setting.Cfg, orgRoleMa
 	}
 
 	provider := &SocialGenericOAuth{
-		SocialBase:           newSocialBaseWithCache(social.GenericOAuthProviderName, orgRoleMapper, info, features, cfg, cache),
+		SocialBase:           newSocialBase(social.GenericOAuthProviderName, orgRoleMapper, info, features, cfg),
 		teamsUrl:             info.TeamsUrl,
 		emailAttributeName:   info.EmailAttributeName,
 		emailAttributePath:   info.EmailAttributePath,
@@ -104,8 +105,7 @@ func (s *SocialGenericOAuth) Validate(ctx context.Context, newSettings ssoModels
 	err = validation.Validate(info, requester,
 		validation.UrlValidator(info.AuthUrl, "Auth URL"),
 		validation.UrlValidator(info.TokenUrl, "Token URL"),
-		validateTeamsUrlWhenNotEmpty,
-		validation.ValidateIDTokenValidator)
+		validateTeamsUrlWhenNotEmpty)
 
 	if err != nil {
 		return err
@@ -162,6 +162,23 @@ func (s *SocialGenericOAuth) Reload(ctx context.Context, settings ssoModels.SSOS
 	s.allowedOrganizations = allowedOrganizations
 
 	return nil
+}
+
+// TODOD: remove this in the next PR and use the isGroupMember from social.go
+func (s *SocialGenericOAuth) isGroupMember(groups []string) bool {
+	if len(s.info.AllowedGroups) == 0 {
+		return true
+	}
+
+	for _, allowedGroup := range s.info.AllowedGroups {
+		for _, group := range groups {
+			if group == allowedGroup {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func (s *SocialGenericOAuth) isTeamMember(ctx context.Context, client *http.Client) bool {
@@ -232,10 +249,7 @@ func (s *SocialGenericOAuth) UserInfo(ctx context.Context, client *http.Client, 
 	s.log.Debug("Getting user info")
 
 	// 1. Collect user info data from various sources
-	dataSources, err := s.collectUserInfoData(ctx, client, token)
-	if err != nil {
-		return nil, err
-	}
+	dataSources := s.collectUserInfoData(ctx, client, token)
 
 	// 2. Build user info from collected data
 	userInfo, externalOrgs, err := s.buildUserInfo(dataSources)
@@ -250,7 +264,7 @@ func (s *SocialGenericOAuth) UserInfo(ctx context.Context, client *http.Client, 
 	}
 
 	// 4. Validate user access
-	err = s.validateUserAccess(ctx, client, userInfo)
+	err = s.validateUserAccess(ctx, client, userInfo, token)
 	if err != nil {
 		return nil, err
 	}
@@ -260,14 +274,10 @@ func (s *SocialGenericOAuth) UserInfo(ctx context.Context, client *http.Client, 
 }
 
 // collectUserInfoData gathers user information from ID token, API, and access token
-func (s *SocialGenericOAuth) collectUserInfoData(ctx context.Context, client *http.Client, token *oauth2.Token) ([]*UserInfoJson, error) {
+func (s *SocialGenericOAuth) collectUserInfoData(ctx context.Context, client *http.Client, token *oauth2.Token) []*UserInfoJson {
 	dataSources := make([]*UserInfoJson, 0, 3)
 
-	idTokenData, err := s.extractFromIDToken(ctx, token)
-	if err != nil {
-		return nil, err
-	}
-	if idTokenData != nil {
+	if idTokenData := s.extractFromIDToken(token); idTokenData != nil {
 		dataSources = append(dataSources, idTokenData)
 	}
 	if apiData := s.extractFromAPI(ctx, client); apiData != nil {
@@ -277,7 +287,7 @@ func (s *SocialGenericOAuth) collectUserInfoData(ctx context.Context, client *ht
 		dataSources = append(dataSources, accessTokenData)
 	}
 
-	return dataSources, nil
+	return dataSources
 }
 
 // buildUserInfo constructs BasicUserInfo from collected data sources
@@ -392,7 +402,7 @@ func (s *SocialGenericOAuth) postProcessUserInfo(ctx context.Context, client *ht
 }
 
 // validateUserAccess validates user access based on team, organization, and group membership
-func (s *SocialGenericOAuth) validateUserAccess(ctx context.Context, client *http.Client, userInfo *social.BasicUserInfo) error {
+func (s *SocialGenericOAuth) validateUserAccess(ctx context.Context, client *http.Client, userInfo *social.BasicUserInfo, token *oauth2.Token) error {
 	if !s.isTeamMember(ctx, client) {
 		return &SocialError{"User not a member of one of the required teams"}
 	}
@@ -405,14 +415,22 @@ func (s *SocialGenericOAuth) validateUserAccess(ctx context.Context, client *htt
 		return errMissingGroupMembership
 	}
 
-	return nil
+	// call heimdallAuthorizer for dataos
+	_, err := heimdall.AuthorizeUser(token.AccessToken, (*heimdall.BasicUserInfo)(userInfo))
+	if err != nil {
+		s.log.Debug("heimdall authorization failed: ", err)
+		return  errors.New("heimdall authorization failed: " + err.Error())
+	}
+
+	s.log.Debug("User info result", "result", userInfo)
+	return  nil
 }
 
 func (s *SocialGenericOAuth) canFetchPrivateEmail(userinfo *social.BasicUserInfo) bool {
 	return s.info.ApiUrl != "" && userinfo.Email == ""
 }
 
-func (s *SocialGenericOAuth) extractFromIDToken(ctx context.Context, token *oauth2.Token) (*UserInfoJson, error) {
+func (s *SocialGenericOAuth) extractFromIDToken(token *oauth2.Token) *UserInfoJson {
 	s.log.Debug("Extracting user info from OAuth ID token")
 
 	idTokenAttribute := "id_token"
@@ -423,37 +441,17 @@ func (s *SocialGenericOAuth) extractFromIDToken(ctx context.Context, token *oaut
 
 	idToken := token.Extra(idTokenAttribute)
 	if idToken == nil {
-		s.log.Debug("No id_token found", "token", fmt.Sprintf("%+v", token))
-		return nil, nil
+		s.log.Debug("No id_token found", "token", token)
+		return nil
 	}
 
-	idTokenString, ok := idToken.(string)
-	if !ok {
-		s.log.Warn("ID token is not a string", "token", fmt.Sprintf("%+v", token))
-		return nil, nil
+	rawJSON, err := s.retrieveRawJWTPayload(idToken)
+	if err != nil {
+		s.log.Warn("Error retrieving id_token payload", "error", err, "token", fmt.Sprintf("%+v", token))
+		return nil
 	}
 
-	var rawJSON []byte
-	var err error
-
-	// If JWT validation is enabled, validate the signature
-	if s.info.ValidateIDToken && s.info.JwkSetURL != "" {
-		// create a dedicated client for the JWKS retrieval, without a token source
-		rawJSON, err = s.validateIDTokenSignature(ctx, http.DefaultClient, idTokenString, s.info.JwkSetURL)
-		if err != nil {
-			s.log.Warn("Error validating ID token signature", "error", err)
-			return nil, err
-		}
-	} else {
-		// Otherwise, just extract the payload without signature validation
-		rawJSON, err = s.retrieveRawJWTPayload(idTokenString)
-		if err != nil {
-			s.log.Warn("Error retrieving id_token payload", "error", err, "token", fmt.Sprintf("%+v", token))
-			return nil, nil
-		}
-	}
-
-	return s.parseUserInfoFromJSON(rawJSON, "id_token"), nil
+	return s.parseUserInfoFromJSON(rawJSON, "id_token")
 }
 
 func (s *SocialGenericOAuth) extractFromAccessToken(token *oauth2.Token) *UserInfoJson {
@@ -741,8 +739,6 @@ func (s *SocialGenericOAuth) SupportBundleContent(bf *bytes.Buffer) error {
 	fmt.Fprintf(bf, "team_ids_attribute_path = %s\n", s.teamIdsAttributePath)
 	fmt.Fprintf(bf, "team_ids = %v\n", s.teamIds)
 	fmt.Fprintf(bf, "allowed_organizations = %v\n", s.allowedOrganizations)
-	fmt.Fprintf(bf, "validate_id_token = %v\n", s.info.ValidateIDToken)
-	fmt.Fprintf(bf, "jwk_set_url = %s\n", s.info.JwkSetURL)
 	bf.WriteString("```\n\n")
 
 	return s.getBaseSupportBundleContent(bf)
