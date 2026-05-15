@@ -64,12 +64,11 @@ ARG BUILD_BRANCH=""
 ARG GO_BUILD_TAGS="oss"
 ARG WIRE_TAGS="oss"
 
-RUN if grep -i -q alpine /etc/issue; then \
-  apk add --no-cache \
-  bash \
-  # Install build dependencies
-  make git; \
-  fi
+RUN if grep -i -q alpine /etc/os-release; then \
+      apk add --no-cache bash make git; \
+    else \
+      apt-get update && apt-get install -y make git && rm -rf /var/lib/apt/lists/*; \
+    fi
 
 WORKDIR /tmp/grafana
 
