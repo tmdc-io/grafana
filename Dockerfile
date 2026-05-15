@@ -81,8 +81,8 @@ COPY .citools .citools
 # Uses --parents to preserve directory structure with fewer COPY directives.
 COPY --parents **/go.mod **/go.sum ./
 
-# detect current user and use matching cache ownership
-RUN --mount=type=cache,target=/tmp/go-mod-cache,uid=1000,gid=1000 \
+RUN mkdir -p /tmp/go-mod-cache && \
+    chmod -R 777 /tmp/go-mod-cache && \
     GOMODCACHE=/tmp/go-mod-cache \
     go mod download
 
