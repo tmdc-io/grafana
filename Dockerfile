@@ -64,6 +64,8 @@ ARG BUILD_BRANCH=""
 ARG GO_BUILD_TAGS="oss"
 ARG WIRE_TAGS="oss"
 
+USER root
+
 RUN if grep -i -q alpine /etc/os-release; then \
       apk add --no-cache bash make git; \
     else \
