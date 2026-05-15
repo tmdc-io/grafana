@@ -81,7 +81,8 @@ COPY .citools .citools
 # Uses --parents to preserve directory structure with fewer COPY directives.
 COPY --parents **/go.mod **/go.sum ./
 
-RUN --mount=type=cache,target=/go/pkg/mod \
+RUN --mount=type=cache,target=/tmp/go-mod-cache \
+    GOMODCACHE=/tmp/go-mod-cache \
     go mod download
 
 # Copy full source
