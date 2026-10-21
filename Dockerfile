@@ -13,9 +13,9 @@ ARG JS_SRC=js-builder
 
 # Dependabot cannot update dependencies listed in ARGs
 # By using FROM instructions we can delegate dependency updates to dependabot
-FROM alpine:3.24.2 AS alpine-base
+FROM tmdcio/alpine:3.24-curated.v2 AS alpine-base
 FROM ubuntu:24.04 AS ubuntu-base
-FROM golang:1.26.9-alpine AS go-builder-base
+FROM golang:1.26.9-alpine3.24-curated.v1 AS go-builder-base
 FROM --platform=${JS_PLATFORM} node:24-alpine AS js-builder-base
 FROM gcr.io/distroless/static-debian13 AS distroless-base
 # Javascript build stage
@@ -65,12 +65,13 @@ ARG SOURCE_DATE_EPOCH=""
 ARG GO_BUILD_TAGS="oss"
 ARG WIRE_TAGS="oss"
 
-RUN if grep -i -q alpine /etc/issue; then \
-  apk add --no-cache \
-  bash \
-  # Install build dependencies
-  make git; \
-  fi
+USER root
+
+RUN if grep -i -q alpine /etc/os-release; then \
+      apk add --no-cache bash make git; \
+    else \
+      apt-get update && apt-get install -y make git && rm -rf /var/lib/apt/lists/*; \
+    fi
 
 WORKDIR /tmp/grafana
 
@@ -82,7 +83,9 @@ COPY .citools .citools
 # Uses --parents to preserve directory structure with fewer COPY directives.
 COPY --parents **/go.mod **/go.sum ./
 
-RUN --mount=type=cache,target=/go/pkg/mod \
+RUN mkdir -p /tmp/go-mod-cache && \
+    chmod -R 777 /tmp/go-mod-cache && \
+    GOMODCACHE=/tmp/go-mod-cache \
     go mod download
 
 # Copy full source

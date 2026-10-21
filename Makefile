@@ -855,3 +855,22 @@ GENERATE_POLICY_BOT_CONFIG_SHA := sha256:d05ff5c7d4247da155c85f8c6f1f9f7c6d013d1
 	sed -i.bak '/name: Workflow \.github\/workflows\/check-frontend-test-coverage\.yml/,/workflows:/{s/- success/- success\n            - failure/;}' .policy.yml; rm -f .policy.yml.bak
 # Make detect-breaking-changes-levitate non-blocking - accept failure so it doesn't prevent merge
 	sed -i.bak '/name: Workflow \.github\/workflows\/detect-breaking-changes-levitate\.yml/,/workflows:/{s/- success/- success\n            - failure/;}' .policy.yml; rm -f .policy.yml.bak
+
+## TMDC
+.PHONY: build-tmdc-docker
+build-tmdc-docker: ## Build Docker image based on Ubuntu for development.
+	@echo "build docker container"
+	tar -ch . | \
+	docker buildx build - \
+	--platform linux/amd64 \
+	--build-arg BINGO=false \
+	--build-arg GO_BUILD_TAGS=$(GO_BUILD_TAGS) \
+	--build-arg WIRE_TAGS=$(WIRE_TAGS) \
+	--build-arg COMMIT_SHA=$$(git rev-parse HEAD) \
+	--build-arg BUILD_BRANCH=$$(git rev-parse --abbrev-ref HEAD) \
+	--push \
+	--sbom=true \
+	--attest type=provenance,mode=max \
+	--tag docker.io/tmdcio/grafana:$(GITHUB_TAGS) \
+	$(DOCKER_BUILD_ARGS)
+
