@@ -15,7 +15,7 @@ ARG JS_SRC=js-builder
 # By using FROM instructions we can delegate dependency updates to dependabot
 FROM tmdcio/alpine:3.24-curated.v2 AS alpine-base
 FROM ubuntu:24.04 AS ubuntu-base
-FROM golang:1.26.9-alpine3.24-curated.v1 AS go-builder-base
+FROM tmdcio/golang:1.26.9-alpine3.24-curated.v1 AS go-builder-base
 FROM --platform=${JS_PLATFORM} node:24-alpine AS js-builder-base
 FROM gcr.io/distroless/static-debian13 AS distroless-base
 # Javascript build stage
